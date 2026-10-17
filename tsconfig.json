@@ -1,0 +1,10 @@
+{
+  // `tsc -b` type-checks the app, the service worker and the Node-side files,
+  // each with its own globals (DOM, WebWorker, Node)
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.sw.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

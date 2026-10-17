@@ -1,0 +1,15 @@
+node_modules
+dist
+dev-dist
+coverage
+*.log
+.DS_Store
+scripts/.cache
+
+# test artifacts
+playwright-report
+test-results
+
+# editors
+.idea
+*.sw?

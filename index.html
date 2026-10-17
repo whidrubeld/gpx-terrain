@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>GPX Terrain</title>
+    <meta
+      name="description"
+      content="See a GPX track on real 3D terrain: elevation profile, playback, waypoints and coordinates. Works offline; your files stay in your browser. Built with three-map-terrain and three.js."
+    />
+    <meta property="og:title" content="GPX Terrain" />
+    <meta
+      property="og:description"
+      content="GPX tracks on real 3D terrain: elevation profile, playback, waypoints."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="GPX Terrain" />
+    <script>
+      // theme and language before the first paint (same rules as
+      // src/state/settings.ts and src/i18n/locales.ts)
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem('gpx-terrain/settings@1') ||
+            localStorage.getItem('three-map-terrain/gpx-viewer/settings@1') ||
+            '{}'
+        )
+        const root = document.documentElement
+        root.dataset.theme =
+          stored.theme === 'dark' || stored.theme === 'light'
+            ? stored.theme
+            : matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+        const supported = ['en', 'ru']
+        root.lang = supported.includes(stored.language)
+          ? stored.language
+          : (navigator.languages
+              .map((tag) => tag.toLowerCase().split(/[-_]/)[0])
+              .find((code) => supported.includes(code)) ?? 'en')
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>GPX Terrain needs JavaScript and WebGL.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

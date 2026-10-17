@@ -52,6 +52,8 @@ test('starts with the chooser, opens an example and changes it', async ({
     timeout: 60_000
   })
 
+  await expect(page.getByText('Terrain ready')).toBeHidden()
+
   // the same chooser, over the track: Esc keeps the track
   await title.click()
   const dialog = page.getByRole('dialog', { name: 'Open a track' })
@@ -59,9 +61,30 @@ test('starts with the chooser, opens an example and changes it', async ({
   await expect(
     dialog.getByRole('button', { name: /Choose file/ })
   ).toBeFocused()
+  // …and nothing replays: no "Terrain ready" for the terrain already there
+  const flashed = page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (!document.body.textContent.includes('Terrain ready')) return
+          observer.disconnect()
+          resolve(true)
+        })
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          characterData: true
+        })
+        setTimeout(() => {
+          observer.disconnect()
+          resolve(false)
+        }, 1500)
+      })
+  )
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(title).toBeVisible()
+  expect(await flashed).toBe(false)
 
   await page.keyboard.press('KeyO')
   await expect(dialog).toBeVisible()

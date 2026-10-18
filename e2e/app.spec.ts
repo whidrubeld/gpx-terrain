@@ -115,6 +115,32 @@ test('opens a file, and keeps the track when the next one is broken', async ({
   await expect(title).toBeVisible()
 })
 
+test.describe('touch screen', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+
+  test('the help shows touch gestures only', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Controls' }).tap()
+    const help = page.getByRole('dialog', { name: 'Controls' })
+    await expect(help.getByRole('heading', { name: 'Touch' })).toBeVisible()
+    await expect(help.getByText('Tap route')).toBeVisible()
+    await expect(help.getByRole('heading', { name: 'Mouse' })).toHaveCount(0)
+    await expect(help.getByRole('heading', { name: 'Keyboard' })).toHaveCount(0)
+  })
+})
+
+test('the help shows mouse and keyboard controls only', async ({ page }) => {
+  await page.goto('/')
+  // the app is up and listening
+  await expect(page.getByText('Drop a .gpx file here')).toBeVisible()
+  await page.keyboard.press('KeyH')
+  const help = page.getByRole('dialog', { name: 'Controls' })
+  await expect(help.getByRole('heading', { name: 'Mouse' })).toBeVisible()
+  await expect(help.getByRole('heading', { name: 'Keyboard' })).toBeVisible()
+  await expect(help.getByText('Wireframe')).toBeVisible()
+  await expect(help.getByRole('heading', { name: 'Touch' })).toHaveCount(0)
+})
+
 test('single-key shortcuts can be switched off', async ({ page }) => {
   await mockTileServers(page)
   await page.goto('/')

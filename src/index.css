@@ -338,7 +338,7 @@
     display: none;
   }
 
-  /* …and no keyboard hint means anything on touch screens */
+  /* …and no keyboard hint means anything on touch screens (useTouch) */
   @media (hover: none) and (pointer: coarse) {
     .kbd {
       display: none;

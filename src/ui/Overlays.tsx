@@ -14,7 +14,7 @@ import {
   uiStore,
   viewerStore
 } from '../state/viewer'
-import { cx, Kbd } from './controls'
+import { cx, Kbd, useTouch } from './controls'
 import { Icon } from './Icon'
 
 /** Tile-by-tile progress while the grid loads: outline → dotted (DEM) → solid (imagery). */
@@ -283,8 +283,8 @@ export function UpdateToast() {
 export function Hint() {
   const t = useT()
   const hint = useSelector(uiStore, (s) => s.hint)
+  const touch = useTouch()
   if (!hint) return null
-  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches
   const items: [string, string][] = touch
     ? [
         [t('hint.oneFinger'), t('hint.pan')],

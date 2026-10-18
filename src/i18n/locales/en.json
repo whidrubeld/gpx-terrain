@@ -255,6 +255,8 @@
       "inspectPoint": "Inspect point",
       "clickRoute": "Click route",
       "seekThere": "Seek there",
+      "tapRoute": "Tap route",
+      "inspectSeek": "Inspect · seek",
       "dragProfile": "Drag profile",
       "scrub": "Scrub",
       "dropFile": "Drop .gpx",

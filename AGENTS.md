@@ -82,6 +82,11 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   special characters on macOS). `IS_APPLE` reads
   `navigator.userAgentData.platform` first. `Kbd always` marks hints that
   work with shortcuts off (combos, Esc); other hints hide then.
+- **Touch or mouse.** `useTouch()` (ui/controls.tsx) splits the UI: phones
+  and tablets get touch gestures only (first-visit hint, help, no drop
+  area, no key hints), everything else mouse and keyboard only. Never both
+  in one place; use this hook, not another query. CSS hides `.kbd` by the
+  same `(hover: none) and (pointer: coarse)`.
 - **Dialogs** use `Modal` (ui/controls.tsx): the store opens and closes the
   `<dialog>` in an effect, Esc is turned into a state change (`cancel` is
   prevented), and a late `close` event is ignored when the dialog is open

@@ -257,6 +257,8 @@
       "inspectPoint": "Данные точки",
       "clickRoute": "Клик по маршруту",
       "seekThere": "Перейти туда",
+      "tapRoute": "Тап по маршруту",
+      "inspectSeek": "Данные · переход",
       "dragProfile": "Тянуть профиль",
       "scrub": "Перемотка",
       "dropFile": "Бросить .gpx",

@@ -52,6 +52,13 @@ export function useMedia(query: string) {
   )
 }
 
+/**
+ * A phone or a tablet: the primary pointer is a finger. The UI shows touch
+ * gestures there and mouse and keyboard controls elsewhere, never both (the
+ * `.kbd` hints hide by the same query in index.css).
+ */
+export const useTouch = () => useMedia('(hover: none) and (pointer: coarse)')
+
 /** `navigator.onLine`, kept up to date. */
 export function useOnline() {
   return useSyncExternalStore(

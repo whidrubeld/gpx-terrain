@@ -14,7 +14,7 @@ import {
   uiStore,
   viewerStore
 } from '../state/viewer'
-import { cx, Kbd } from './controls'
+import { cx, Kbd, useTouch } from './controls'
 import { Icon } from './Icon'
 
 /** Tile-by-tile progress while the grid loads: outline → dotted (DEM) → solid (imagery). */
@@ -43,8 +43,9 @@ export function LoadingHud() {
   }, [terrain.ready, terrain.fit])
   const busy =
     loading || (terrain.fit !== null && (!terrain.ready || (!done && !expired)))
-  // stay a moment after the last tile, then step out
-  const [linger, setLinger] = useState(true)
+  // stay a moment after the last tile, then step out; idle from the start
+  // when nothing loads (no "Terrain ready" for a terrain that was ready)
+  const [linger, setLinger] = useState(busy)
   useEffect(() => {
     if (busy) {
       setLinger(true)
@@ -282,8 +283,8 @@ export function UpdateToast() {
 export function Hint() {
   const t = useT()
   const hint = useSelector(uiStore, (s) => s.hint)
+  const touch = useTouch()
   if (!hint) return null
-  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches
   const items: [string, string][] = touch
     ? [
         [t('hint.oneFinger'), t('hint.pan')],

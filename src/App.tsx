@@ -191,11 +191,16 @@ export function App() {
       ) : (
         <RegularLayout />
       )}
-      {hasTrack && <ChooserDialog />}
+      {hasTrack && (
+        <>
+          <ChooserDialog />
+          {/* stays mounted under the chooser: a remount would replay its exit */}
+          <LoadingHud />
+        </>
+      )}
       {trackView && (
         <>
           <FileInput />
-          <LoadingHud />
           <DropOverlay />
         </>
       )}

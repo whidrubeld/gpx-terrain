@@ -18,7 +18,7 @@ import {
   uiStore,
   viewerStore
 } from '../state/viewer'
-import { cx, Kbd, Modal, useMedia } from './controls'
+import { cx, Kbd, Modal, useTouch } from './controls'
 import { Icon } from './Icon'
 import { LIBRARY, REPOSITORY, Toolbar } from './Toolbar'
 
@@ -59,7 +59,7 @@ function DropArea() {
   const dragging = useSelector(uiStore, (s) => s.dragging)
   const reading = useSelector(viewerStore, (s) => s.loading?.kind === 'file')
   // phones and tablets cannot drag files in: just the button
-  const touch = useMedia('(hover: none) and (pointer: coarse)')
+  const touch = useTouch()
   return (
     <div
       className='drop-area grid cursor-pointer justify-items-center gap-3 px-4 py-7 text-center'

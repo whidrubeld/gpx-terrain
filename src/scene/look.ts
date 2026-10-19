@@ -46,6 +46,14 @@ export function introPhase([start, duration]: readonly [
   return Math.min(1, Math.max(0, t))
 }
 
+/**
+ * Seconds one frame may advance continuous motion (auto-rotate, playback).
+ * A hidden tab or a suspended app stops the frame loop, and the first frame
+ * back reports the whole absence: the camera would spin through every turn
+ * it missed.
+ */
+export const frameStep = (delta: number) => Math.min(delta, 0.1)
+
 export const easeOutCubic = (t: number) => 1 - (1 - t) ** 3
 export const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2

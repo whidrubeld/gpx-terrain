@@ -11,7 +11,7 @@ import {
   uiStore,
   viewerStore
 } from '../state/viewer'
-import { PALETTE } from './look'
+import { frameStep, PALETTE } from './look'
 import { perf } from './perf'
 
 /** Lights (sun from the north-west, the cartographic convention) and fog. */
@@ -66,7 +66,7 @@ export function PlaybackDriver() {
     if (!playing || !viewerStore.state.track) return
     const next = Math.min(
       1,
-      progress + (Math.min(delta, 0.1) * speed) / PLAYBACK_SECONDS
+      progress + (frameStep(delta) * speed) / PLAYBACK_SECONDS
     )
     playbackStore.setState((s) => ({ ...s, progress: next, playing: next < 1 }))
   })

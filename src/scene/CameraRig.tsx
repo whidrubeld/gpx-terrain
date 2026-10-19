@@ -24,7 +24,7 @@ import {
   viewerStore
 } from '../state/viewer'
 import { lineAt, surfacePoint } from './drape'
-import { easeInOutCubic, INTRO } from './look'
+import { easeInOutCubic, frameStep, INTRO } from './look'
 import { sceneRefs } from './refs'
 
 interface Pose {
@@ -477,7 +477,7 @@ export function CameraRig() {
       }
     }
     controls.autoRotate = settings.autoRotate && !current
-    controls.update(delta)
+    controls.update(frameStep(delta))
     const box = terrainBox()
     if (box && !current) clampTarget(controls, box, settings.exaggeration)
   })

@@ -74,26 +74,32 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   format must still call `useLocale()`. Coordinates stay international
   (decimal point, N/S/E/W). Doto has no Cyrillic: Russian falls back to
   JetBrains Mono in `.dot` text.
-- **Looks.** `settings.look` — `photo`, `mono`, `model`, `wireframe` — is
-  the one choice of how the scene is drawn; each is complete on its own
-  anywhere, mountains or a city. `LOOK_STYLES` (scene/look.ts) gives its
-  imagery (the photo, the photo in gray through a `process`, none), wireframe
-  and the colors of the terrain, base and every feature, per theme. The
-  terrain's material is our `material.create`: it reads the look when the
-  library calls it, so a change restyles the tiles (`tile.restyle()`), and a
-  new `process` or wireframe goes through `map.setMaterial()`. The imagery
-  loads in every look, so switching is immediate; it is credited only where
-  it shows (`showsImagery`). W goes into lines and back to `solidLook`.
+- **Looks.** `settings.look` — `photo`, `mono`, `model`, `wireframe` (the
+  default) — is the one choice of how the scene is drawn; each is complete
+  on its own anywhere, mountains or a city. `LOOK_STYLES` (scene/look.ts)
+  gives its imagery (the photo, the photo in gray through a `process`,
+  none), wireframe and the colors of the terrain and every feature, per
+  theme. The map's own look stays solid: the terrain's material is our
+  `material.create`, which reads the look (lines included) when the library
+  calls it — a change restyles the tiles through `map.setMaterial()`, and
+  only a new `process` reloads the imagery — and the features take the
+  look's lines themselves. The imagery loads in every look, so switching is
+  immediate; it is credited only where it shows (`showsImagery`). W goes
+  into lines and back to `solidLook`.
 - **Map features** (scene/layers.ts): `Buildings`, `Roads`, `Water`, `Trees`
-  from OpenFreeMap (no key; one vector tile for all four). Which of them show
-  is per look (`lookFeatures`, defaults in `LOOK_FEATURES`: on the photo only
-  buildings, since the photo has the rest), under one switch (`features`, C).
-  A layer joins the map the first time it is shown and is only hidden after
-  that; its colors are fixed when it is made, so another look or theme makes
-  new layers (their tiles come again from the HTTP cache). In lines, water
-  and trees stay solid. Below their `FEATURE_MIN_ZOOM` they draw nothing: the
-  View panel says from which zoom, and the credit (`drawsFeatures`) follows.
-  The base is the library's `TerrainBase`.
+  from OpenFreeMap (no key; one vector tile for all four), made once per map.
+  Which of them show is per look (`lookFeatures`, defaults in
+  `LOOK_FEATURES`: on the photo only buildings, since the photo has the
+  rest), under one switch (`features`, C). A layer joins the map the first
+  time it is shown and is only hidden after that. Another look or theme is
+  `layer.setMaterial()`: colors, and in lines the outlines over a light fill
+  (`fillOpacity`) — the materials change, not the geometry. The library
+  draws a few tiles per frame, the nearest to `map.focus` (the controls'
+  target) first. Below their `FEATURE_MIN_ZOOM` they draw nothing: the View
+  panel says from which zoom, and the credit (`drawsFeatures`) follows.
+- **The base** is two `TerrainBase`s: walls in a dot pattern (a material of
+  ours: the dots follow the position, the base has no UVs) and their
+  outline. It stays solid in lines because the map's look does.
 - **`map.terrain` is not a list of tiles**: it also holds the layers' groups.
   Use `placedTiles(map)` (scene/tiles.ts).
 - **View panel**: the look, exaggeration and what is drawn first; the
@@ -179,10 +185,9 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^3.x`); its version is shown in About
-  (`__LIBRARY_VERSION__`, read from its package.json at build time). Until a
-  release is published, work against the local build with `yarn link
-three-map-terrain` (`resolve.dedupe` keeps one three.js).
+- `three-map-terrain` comes from npm (`^3.1`: layers drawn between frames,
+  looks changed in place, `fillOpacity`); its version is shown in About
+  (`__LIBRARY_VERSION__`, read from its package.json at build time).
 - `three` and `@types/three` share the same minor, inside the library's peer
   range.
 - React stays `<19.4` — the `@react-three/fiber` 9.x peer range.

@@ -20,6 +20,13 @@ import { Terrain } from './Terrain'
 const FLAT = 0.02
 
 /**
+ * Meters the route lies above the surface: on the roads, not over them. The
+ * route's lines are drawn a little nearer the camera (see Route.tsx), so
+ * they need no more to stay in front of it.
+ */
+const LIFT = 0.5
+
+/**
  * Terrain and everything placed on it, in terrain coordinates. `scale.z` is
  * the vertical exaggeration (times the intro "rise"), so changing it costs
  * nothing: no tile is rebuilt.
@@ -69,7 +76,7 @@ export function World() {
       return
     }
     const cell = map.options.tileSize / map.options.tileSegments
-    const drape = drapeTrack(map, track, cell, cell * 0.3)
+    const drape = drapeTrack(map, track, cell, LIFT * map.options.zScale)
     terrainStore.setState((s) => (s.map === map ? { ...s, drape } : s))
   }, [map, ready, revision, track])
 

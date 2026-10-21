@@ -15,6 +15,7 @@ export const PALETTE = {
     fg: '#f4f4f4',
     halo: '#000000',
     relief: '#5a5a5a',
+    wall: '#141414',
     edge: '#8c8c8c'
   },
   light: {
@@ -22,6 +23,7 @@ export const PALETTE = {
     fg: '#0a0a0a',
     halo: '#ffffff',
     relief: '#e4e4e4',
+    wall: '#dcdcdc',
     edge: '#6e6e6e'
   }
 } as const
@@ -29,15 +31,17 @@ export const PALETTE = {
 export type Theme = keyof typeof PALETTE
 export type Palette = (typeof PALETTE)[Theme]
 
+/** In lines, how opaque the features' faces are under them: a light fill. */
+export const WIRE_FILL = 0.12
+
 /** How a look draws the terrain and the map features, in one theme. */
 export interface LookStyle {
   /** the photo, the photo in gray, or none */
   imagery: 'color' | 'mono' | null
+  /** lines: the terrain's triangles, the outlines of the features over a fill */
   wireframe: boolean
-  /** the terrain without imagery — and while its imagery loads */
+  /** the terrain without imagery — and while its imagery loads; in lines, the lines */
   terrain: string
-  /** the sides of the terrain base, or its outline */
-  base: string
   buildings: string
   roads: string
   water: string
@@ -48,7 +52,8 @@ export interface LookStyle {
  * The looks. On the photo, features keep the colors of the library (white
  * buildings, blue water, green trees); on the gray photo they are gray; the
  * model is a colored map in relief; in lines, the terrain is a quiet grid
- * and every feature has a color of its own, so that none merges into it.
+ * and every feature is outlined in a color of its own over a light fill of
+ * it, so that none merges into the grid.
  */
 export const LOOK_STYLES: Readonly<
   Record<Look, Readonly<Record<Theme, LookStyle>>>
@@ -58,7 +63,6 @@ export const LOOK_STYLES: Readonly<
       imagery: 'color',
       wireframe: false,
       terrain: PALETTE.dark.relief,
-      base: '#262626',
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: WATER_COLOR,
@@ -68,7 +72,6 @@ export const LOOK_STYLES: Readonly<
       imagery: 'color',
       wireframe: false,
       terrain: PALETTE.light.relief,
-      base: '#d4d4d4',
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: WATER_COLOR,
@@ -80,7 +83,6 @@ export const LOOK_STYLES: Readonly<
       imagery: 'mono',
       wireframe: false,
       terrain: PALETTE.dark.relief,
-      base: '#262626',
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: '#404040',
@@ -90,7 +92,6 @@ export const LOOK_STYLES: Readonly<
       imagery: 'mono',
       wireframe: false,
       terrain: PALETTE.light.relief,
-      base: '#d4d4d4',
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: '#a8a8a8',
@@ -102,7 +103,6 @@ export const LOOK_STYLES: Readonly<
       imagery: null,
       wireframe: false,
       terrain: '#57544e',
-      base: '#2b2a28',
       buildings: '#dcdcdc',
       roads: '#a39e95',
       water: '#3d6b92',
@@ -112,7 +112,6 @@ export const LOOK_STYLES: Readonly<
       imagery: null,
       wireframe: false,
       terrain: '#e6e0d4',
-      base: '#b9b2a4',
       buildings: '#ffffff',
       roads: '#faf8f3',
       water: '#8fb8d9',
@@ -124,7 +123,6 @@ export const LOOK_STYLES: Readonly<
       imagery: null,
       wireframe: true,
       terrain: '#3d3d3d',
-      base: '#6a6a6a',
       buildings: '#b4b4b4',
       roads: '#e0a24a',
       water: '#2f6496',
@@ -134,7 +132,6 @@ export const LOOK_STYLES: Readonly<
       imagery: null,
       wireframe: true,
       terrain: '#c4c4c4',
-      base: '#9a9a9a',
       buildings: '#6e6e6e',
       roads: '#c7801f',
       water: '#86b6e0',

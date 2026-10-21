@@ -6,9 +6,10 @@ import {
   createFeatureLayers,
   drawsFeatures,
   FEATURE_MIN_ZOOM,
+  styleFeatures,
   syncFeatures
 } from './layers'
-import { LOOK_STYLES } from './look'
+import { LOOK_STYLES, WIRE_FILL } from './look'
 
 const all = (shown: boolean) => ({
   buildings: shown,
@@ -60,5 +61,30 @@ describe('map features', () => {
     expect(drawsFeatures({ ...all(false), trees: true }, 13)).toBe(false)
     expect(drawsFeatures({ ...all(false), trees: true }, 14)).toBe(true)
     expect(drawsFeatures(all(false), 14)).toBe(false)
+  })
+})
+
+describe('the looks of the map features', () => {
+  it('outline them over a light fill in lines, and keep the map solid', () => {
+    const map = new Map({ location: { lat: 46.52, lon: 6.63 } })
+    const layers = createFeatureLayers(LOOK_STYLES.photo.dark)
+    syncFeatures(map, layers, all(true))
+    const look = (feature: Feature) =>
+      (layers[feature] as unknown as { look: Record<string, unknown> }).look
+
+    styleFeatures(layers, LOOK_STYLES.wireframe.light)
+    expect(look('water')).toMatchObject({
+      wireframe: true,
+      fillOpacity: WIRE_FILL,
+      color: LOOK_STYLES.wireframe.light.water
+    })
+    // the base keeps its walls
+    expect(map.materialOptions.wireframe).toBe(false)
+
+    styleFeatures(layers, LOOK_STYLES.model.dark)
+    expect(look('trees')).toMatchObject({
+      wireframe: false,
+      color: LOOK_STYLES.model.dark.trees
+    })
   })
 })

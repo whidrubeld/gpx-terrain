@@ -84,7 +84,7 @@ function defaults(): Settings {
   return {
     theme: 'system',
     language: 'auto',
-    look: 'photo',
+    look: 'wireframe',
     solidLook: 'photo',
     features: true,
     lookFeatures: {
@@ -159,7 +159,10 @@ function load(): Settings {
     merged.panels = mergeBooleans(base.panels, stored.panels)
     merged.lookFeatures = mergeBooleans(base.lookFeatures, stored.lookFeatures)
     const settings = merged as unknown as Settings
-    if (!isLook(stored.look)) settings.look = legacyLook(stored)
+    // settings of before looks: their imagery and wireframe
+    const legacy = 'imagery' in stored || 'wireframe' in stored
+    if (!isLook(stored.look))
+      settings.look = legacy ? legacyLook(stored) : base.look
     const solid = stored.solidLook
     settings.solidLook =
       isLook(solid) && solid !== 'wireframe'

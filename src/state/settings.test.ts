@@ -21,9 +21,11 @@ describe('settings', () => {
     expect(settings.shortcuts).toBe(true)
   })
 
-  it('start with the photo, showing on it only what it lacks', async () => {
+  it('start in lines, with the photo showing only what it lacks', async () => {
     const settings = await load({})
-    expect(settings.look).toBe('photo')
+    expect(settings.look).toBe('wireframe')
+    // W goes to the photo
+    expect(settings.solidLook).toBe('photo')
     expect(settings.features).toBe(true)
     expect(settings.lookFeatures.photo).toEqual({
       buildings: true,
@@ -31,7 +33,7 @@ describe('settings', () => {
       water: false,
       trees: false
     })
-    expect(Object.values(settings.lookFeatures.model)).not.toContain(false)
+    expect(Object.values(settings.lookFeatures.wireframe)).not.toContain(false)
   })
 
   it('keep the features of every look, and drop what is not a choice', async () => {

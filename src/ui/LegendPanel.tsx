@@ -12,7 +12,7 @@ import { FEATURES, settingsStore, shownFeatures } from '../state/settings'
 import { terrainStore, uiStore, viewerStore } from '../state/viewer'
 import { graticuleStep } from '../scene/Graticule'
 import { FEATURE_MIN_ZOOM } from '../scene/layers'
-import { GLYPHS, type GlyphName, LOOK_STYLES } from '../scene/look'
+import { GLYPHS, type GlyphName, LOOK_STYLES, WIRE_FILL } from '../scene/look'
 import { markStep } from '../scene/Markers'
 import { Panel } from './controls'
 
@@ -65,8 +65,19 @@ function Line({
   )
 }
 
-/** A map feature's color in the current look: a block, or a line in wireframe. */
-function Swatch({ color, line }: { color: string; line: boolean }) {
+/**
+ * A map feature in the current look: roads as a line, the others as an
+ * area — solid, or in lines its outline over the scene's light fill.
+ */
+function Swatch({
+  color,
+  line,
+  outline
+}: {
+  color: string
+  line: boolean
+  outline: boolean
+}) {
   return (
     <svg width={28} height={8} aria-hidden>
       {line ? (
@@ -81,13 +92,14 @@ function Swatch({ color, line }: { color: string; line: boolean }) {
         />
       ) : (
         <rect
-          x={6}
-          y={0}
-          width={16}
-          height={8}
+          x={6.5}
+          y={0.5}
+          width={15}
+          height={7}
           fill={color}
-          stroke='currentColor'
-          strokeOpacity={0.4}
+          fillOpacity={outline ? WIRE_FILL : 1}
+          stroke={outline ? color : 'currentColor'}
+          strokeOpacity={outline ? 1 : 0.4}
           shapeRendering='crispEdges'
         />
       )}
@@ -191,11 +203,8 @@ export function LegendBody() {
             symbol={
               <Swatch
                 color={style[feature]}
-                // in lines, water and trees stay solid
-                line={
-                  style.wireframe &&
-                  (feature === 'buildings' || feature === 'roads')
-                }
+                line={feature === 'roads'}
+                outline={style.wireframe}
               />
             }
             label={t(`view.${feature}`)}

@@ -147,16 +147,18 @@ test('single-key shortcuts can be switched off', async ({ page }) => {
   await mockTileServers(page)
   await page.goto('/')
   await page.keyboard.press('Digit1')
+  // lines first; W goes to the photo
   const wire = page.getByRole('radio', { name: 'Wire' })
-  await expect(wire).not.toBeChecked()
-  await page.keyboard.press('KeyW')
+  const photo = page.getByRole('radio', { name: 'Photo' })
   await expect(wire).toBeChecked()
+  await page.keyboard.press('KeyW')
+  await expect(photo).toBeChecked()
 
   // in the advanced settings, closed at first
   await page.getByRole('button', { name: 'Advanced' }).click()
   await page.getByText('Keyboard shortcuts', { exact: true }).click()
   await page.keyboard.press('KeyW')
-  await expect(wire).toBeChecked()
+  await expect(photo).toBeChecked()
   await expect(
     page.getByRole('switch', { name: /^Keyboard shortcuts/ })
   ).not.toBeChecked()
@@ -172,7 +174,9 @@ test('every style shows its own map features', async ({ page }) => {
   const buildings = page.getByRole('switch', { name: /^Buildings/ })
   const roads = page.getByRole('switch', { name: /^Roads/ })
 
-  // on the photo, only what it lacks
+  // in lines everything; on the photo, only what it lacks
+  await expect(roads).toBeChecked()
+  await choose('Photo')
   await expect(buildings).toBeChecked()
   await expect(roads).not.toBeChecked()
   await choose('Model')

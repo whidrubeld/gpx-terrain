@@ -30,19 +30,25 @@ const textured = new WeakSet<Tile>()
 
 /**
  * The material of a terrain tile: the library's, on its imagery — or the
- * bare relief in the look's color, without imagery and while it loads. It
- * reads the settings when the library calls it, so tiles are restyled when
- * those change. The imagery loads in every look: switching is immediate.
+ * bare relief in the look's color, without imagery and while it loads; in
+ * the look's lines. It reads the settings when the library calls it, so
+ * tiles are restyled when those change. The imagery loads in every look:
+ * switching is immediate. (The map's own look stays solid: the base keeps
+ * its walls; the features take the look's lines themselves, layers.ts.)
  */
 function terrainMaterial({ texture, tile, options }: TerrainMaterialInput) {
   if (texture) textured.add(tile)
   const style = currentStyle()
+  const { wireframe } = style
   if (texture && style.imagery) {
-    return createTerrainMaterial({ texture, options })
+    return createTerrainMaterial({
+      texture,
+      options: { ...options, wireframe }
+    })
   }
   return createTerrainMaterial({
     texture: null,
-    options: { ...options, color: style.terrain }
+    options: { ...options, wireframe, color: style.terrain }
   })
 }
 
@@ -98,11 +104,7 @@ export function Terrain({
         tileSegments: segments,
         zScale: fit.zScale
       },
-      material: {
-        wireframe: style.wireframe,
-        process: processor(style),
-        create: terrainMaterial
-      }
+      material: { process: processor(style), create: terrainMaterial }
     })
     map.addLayer(placeholders)
     return map
@@ -157,17 +159,10 @@ export function Terrain({
     }
   }, [map, fit])
 
-  // the look: wireframe is the layers' too, and a processor reloads the
-  // imagery; the rest is made again from the same textures
+  // the look: the tiles' materials are made again from the same textures;
+  // only a new processor reloads the imagery
   useEffect(() => {
-    const style = LOOK_STYLES[look][theme]
-    const process = processor(style)
-    const options = map.materialOptions
-    if (options.wireframe !== style.wireframe || options.process !== process) {
-      map.setMaterial({ wireframe: style.wireframe, process })
-    } else {
-      for (const tile of placedTiles(map)) tile.restyle()
-    }
+    map.setMaterial({ process: processor(LOOK_STYLES[look][theme]) })
   }, [map, look, theme])
 
   useFeatureLayers(map)

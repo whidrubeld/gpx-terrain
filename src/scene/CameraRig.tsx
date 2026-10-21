@@ -320,6 +320,13 @@ export function CameraRig() {
     }
   }, [camera, gl, set])
 
+  // the map features draw the tiles around what the camera looks at first
+  const map = useSelector(terrainStore, (s) => s.map)
+  useEffect(() => {
+    const controls = controlsRef.current
+    if (map && controls) map.focus = controls.target
+  }, [map])
+
   // The optical center sits in the middle of the area the panels leave free.
   // It glides there when a panel or sheet opens instead of jumping.
   const center = useRef<{

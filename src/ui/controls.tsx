@@ -258,18 +258,26 @@ export function Toggle({
   label,
   checked,
   onChange,
-  hotkey
+  hotkey,
+  note
 }: {
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
   hotkey?: string
+  /** muted, before the switch: e.g. why it shows nothing now */
+  note?: string
 }) {
   return (
     <label className='flex h-6 cursor-pointer select-none items-center gap-2'>
       <span className='flex-1 truncate text-2xs font-semibold uppercase tracking-[0.12em]'>
         {label}
       </span>
+      {note && (
+        <span className='flex-none text-2xs uppercase tracking-[0.08em] text-muted tabular-nums'>
+          {note}
+        </span>
+      )}
       {hotkey && <Kbd>{hotkey}</Kbd>}
       <input
         type='checkbox'

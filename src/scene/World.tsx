@@ -7,7 +7,6 @@ import { withTerrainElevation } from '../gpx/track'
 import { fitTerrain } from '../lib/fit'
 import { settingsStore } from '../state/settings'
 import { terrainStore, viewerStore } from '../state/viewer'
-import { Base } from './Base'
 import { drapeTrack } from './drape'
 import { Graticule } from './Graticule'
 import { easeOutCubic, INTRO, introPhase } from './look'
@@ -96,7 +95,6 @@ export function World() {
       {fit && (
         <Terrain key={`${fit.key}:${segments}`} fit={fit} segments={segments} />
       )}
-      <Base />
       <Graticule />
       <Route />
       <Markers />

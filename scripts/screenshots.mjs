@@ -20,7 +20,12 @@ const SCENES = [
   {
     name: 'hero',
     viewport: [1280, 800, 2],
-    settings: { theme: 'dark', language: 'en', wireframe: true, segments: 64 },
+    settings: {
+      theme: 'dark',
+      language: 'en',
+      look: 'wireframe',
+      segments: 64
+    },
     panels: { view: false },
     preset: 'stelvio',
     hover: 0.6
@@ -33,7 +38,7 @@ const SCENES = [
   {
     name: 'mono-light-ru',
     viewport: [1280, 800, 2],
-    settings: { theme: 'light', language: 'ru', imagery: 'mono' },
+    settings: { theme: 'light', language: 'ru', look: 'mono' },
     panels: { perf: false },
     preset: 'bright-angel',
     progress: 0.55

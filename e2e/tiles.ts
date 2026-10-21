@@ -46,8 +46,9 @@ const terrarium = (meters: number) => {
 }
 
 /**
- * Serves synthetic tiles instead of AWS Terrain Tiles and EOX: rolling hills
- * and plain gray imagery, so tests neither depend on nor load the servers.
+ * Serves synthetic tiles instead of AWS Terrain Tiles, EOX and OpenFreeMap:
+ * rolling hills, plain gray imagery and no map features, so tests neither
+ * depend on nor load the servers.
  */
 export async function mockTileServers(page: Page) {
   const headers = { 'access-control-allow-origin': '*' }
@@ -75,5 +76,22 @@ export async function mockTileServers(page: Page) {
   )
   await page.route('https://tiles.maps.eox.at/**', (route) =>
     route.fulfill({ contentType: 'image/png', headers, body: imagery })
+  )
+  // the TileJSON names the tiles; an empty vector tile has no features
+  await page.route('https://tiles.openfreemap.org/**', (route) =>
+    route.request().url().endsWith('.pbf')
+      ? route.fulfill({
+          contentType: 'application/vnd.mapbox-vector-tile',
+          headers,
+          body: Buffer.alloc(0)
+        })
+      : route.fulfill({
+          contentType: 'application/json',
+          headers,
+          json: {
+            tilejson: '3.0.0',
+            tiles: ['https://tiles.openfreemap.org/planet/e2e/{z}/{x}/{y}.pbf']
+          }
+        })
   )
 }

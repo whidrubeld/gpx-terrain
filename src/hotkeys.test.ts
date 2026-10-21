@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseGpx } from './gpx/parse'
 import { buildTrack } from './gpx/track'
 import { handleHotkey, HOTKEYS, IS_APPLE, keysOf } from './hotkeys'
-import { setSetting, settingsStore } from './state/settings'
+import {
+  setLook,
+  setSetting,
+  settingsStore,
+  shownFeatures
+} from './state/settings'
 import { commands, uiStore, viewerStore } from './state/viewer'
 
 const press = (
@@ -77,15 +82,46 @@ describe('handleHotkey', () => {
   })
 
   it('single keys can be switched off; ⌘/Ctrl combinations keep working', () => {
-    const wireframe = settingsStore.state.wireframe
+    setLook('photo')
     setSetting('shortcuts', false)
     expect(press('KeyW').handled).toBe(false)
-    expect(settingsStore.state.wireframe).toBe(wireframe)
+    expect(settingsStore.state.look).toBe('photo')
     expect(press('KeyO', { ctrlKey: true }).handled).toBe(true)
     setSetting('shortcuts', true)
     expect(press('KeyW').handled).toBe(true)
-    expect(settingsStore.state.wireframe).toBe(!wireframe)
+    expect(settingsStore.state.look).toBe('wireframe')
+  })
+
+  it('W goes into lines and back to the look before, I steps through the looks', () => {
+    setLook('model')
     press('KeyW')
+    expect(settingsStore.state.look).toBe('wireframe')
+    press('KeyW')
+    expect(settingsStore.state.look).toBe('model')
+    press('KeyI')
+    expect(settingsStore.state.look).toBe('wireframe')
+    press('KeyI')
+    expect(settingsStore.state.look).toBe('photo')
+  })
+
+  it('C hides the map features and shows them again, as each look had them', () => {
+    setLook('photo')
+    setSetting('features', true)
+    expect(shownFeatures(settingsStore.state).buildings).toBe(true)
+    expect(press('KeyC').handled).toBe(true)
+    expect(Object.values(shownFeatures(settingsStore.state))).toEqual([
+      false,
+      false,
+      false,
+      false
+    ])
+    press('KeyC')
+    expect(shownFeatures(settingsStore.state)).toEqual({
+      buildings: true,
+      roads: false,
+      water: false,
+      trees: false
+    })
   })
 
   it('ignores keys typed into text fields', () => {

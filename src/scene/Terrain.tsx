@@ -1,144 +1,71 @@
 import { useFrame } from '@react-three/fiber'
+import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo } from 'react'
+import { MeshNormalMaterial } from 'three'
 import {
-  CanvasTexture,
-  type Material,
-  Mesh,
-  MeshBasicMaterial,
-  MeshLambertMaterial,
-  MeshNormalMaterial,
-  SRGBColorSpace,
-  type Texture
-} from 'three'
-import { Map, Source } from 'three-map-terrain'
+  createTerrainMaterial,
+  Map,
+  type MapLayer,
+  type TerrainMaterialInput,
+  type Tile
+} from 'three-map-terrain'
 
 import type { TerrainFit } from '../lib/fit'
-import { type Imagery, settingsStore } from '../state/settings'
+import { settingsStore } from '../state/settings'
 import { terrainStore, uiStore } from '../state/viewer'
-import { PALETTE } from './look'
+import { useFeatureLayers, useTerrainBase } from './layers'
+import { LOOK_STYLES, type LookStyle, monochrome } from './look'
+import { placedTiles } from './tiles'
+
+/** The style of the current look, in the current theme. */
+const currentStyle = () =>
+  LOOK_STYLES[settingsStore.state.look][uiStore.state.theme]
+
+/** A processor reloads the imagery: only the gray photo has one. */
+const processor = (style: LookStyle) =>
+  style.imagery === 'mono' ? monochrome : undefined
+
+/** Tiles whose imagery has arrived. */
+const textured = new WeakSet<Tile>()
 
 /**
- * Per-tile state of the runtime look. The library builds one textured
- * material per tile; the viewer only flips properties of that material, so
- * imagery and wireframe switch without reloading anything.
+ * The material of a terrain tile: the library's, on its imagery — or the
+ * bare relief in the look's color, without imagery and while it loads. It
+ * reads the settings when the library calls it, so tiles are restyled when
+ * those change. The imagery loads in every look: switching is immediate.
  */
-interface LookData {
-  key?: string
-  /** the library's quad texture */
-  source?: Texture | null
-  /** grayscale copy, made on demand */
-  mono?: CanvasTexture
-}
-
-/**
- * Shown instead of the library's (rainbow, wireframe) placeholder while a
- * texture loads: the bare relief, in the scene's grays.
- */
-const placeholders = {
-  dark: new MeshLambertMaterial({ color: PALETTE.dark.relief }),
-  light: new MeshLambertMaterial({ color: PALETTE.light.relief })
-}
-const isPlaceholder = (material: Material) =>
-  material === placeholders.dark || material === placeholders.light
-
-const isTileMaterial = (material: Material) =>
-  (material instanceof MeshLambertMaterial ||
-    material instanceof MeshBasicMaterial) &&
-  !isPlaceholder(material)
-
-function tiles(map: Map) {
-  return map.terrain.children.filter(
-    (child): child is Mesh => child instanceof Mesh
-  )
-}
-
-/** Luminance copy of a tile texture, with a little extra contrast. */
-function monochrome(texture: Texture): CanvasTexture | undefined {
-  const image = texture.image as HTMLCanvasElement | OffscreenCanvas | undefined
-  if (!image?.width) return undefined
-  const canvas = document.createElement('canvas')
-  canvas.width = image.width
-  canvas.height = image.height
-  const context = canvas.getContext('2d', { willReadFrequently: true })
-  if (!context) return undefined
-  context.drawImage(image, 0, 0)
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
-  const { data } = pixels
-  for (let i = 0; i < data.length; i += 4) {
-    const luma = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]
-    const value = Math.min(255, Math.max(0, (luma - 118) * 1.25 + 128))
-    data[i] = data[i + 1] = data[i + 2] = value
+function terrainMaterial({ texture, tile, options }: TerrainMaterialInput) {
+  if (texture) textured.add(tile)
+  const style = currentStyle()
+  if (texture && style.imagery) {
+    return createTerrainMaterial({ texture, options })
   }
-  context.putImageData(pixels, 0, 0)
-  const mono = new CanvasTexture(canvas)
-  mono.colorSpace = SRGBColorSpace
-  mono.anisotropy = texture.anisotropy
-  return mono
+  return createTerrainMaterial({
+    texture: null,
+    options: { ...options, color: style.terrain }
+  })
+}
+
+/** The bare relief instead of the library's rainbow placeholder while imagery loads. */
+const placeholders: MapLayer = {
+  tileLoaded(tile) {
+    if (!(tile.mesh.material instanceof MeshNormalMaterial)) return
+    tile.mesh.material = terrainMaterial({
+      texture: null,
+      tile,
+      options: tile.map.materialOptions
+    })
+  }
 }
 
 /** Start without the tiles that are still loading after this long (ms). */
 const PARTIAL_AFTER = 25_000
 const PARTIAL_RETRY = 5_000
 
-/** Converting a texture takes a few ms: spread the work over frames. */
-const MONO_PER_FRAME = 2
-
-function applyLook(
-  map: Map,
-  imagery: Imagery,
-  wireframe: boolean,
-  theme: 'dark' | 'light'
-) {
-  const key = `${imagery}|${wireframe}|${theme}`
-  let budget = MONO_PER_FRAME
-  for (const mesh of tiles(map)) {
-    const material = mesh.material as Material
-    if (material instanceof MeshNormalMaterial || isPlaceholder(material)) {
-      // still loading: the library's shared placeholder, or ours of the other theme
-      if (material !== placeholders[theme]) mesh.material = placeholders[theme]
-      continue
-    }
-    if (!isTileMaterial(material)) continue
-
-    const tile = material as MeshLambertMaterial | MeshBasicMaterial
-    const data = tile.userData as LookData
-    if (data.key === key) continue
-    if (data.source === undefined) data.source = tile.map
-
-    if (imagery === 'mono' && !data.mono && data.source) {
-      if (budget-- <= 0) continue
-      data.mono = monochrome(data.source)
-    }
-    tile.map =
-      imagery === 'color'
-        ? (data.source ?? null)
-        : imagery === 'mono'
-          ? (data.mono ?? data.source ?? null)
-          : null
-    tile.color.set(imagery === 'relief' ? PALETTE[theme].relief : 0xffffff)
-    tile.wireframe = wireframe
-    tile.needsUpdate = true
-    data.key = key
-  }
-}
-
-/** Hands every tile its own texture back, so that `map.clean()` disposes it. */
-function releaseLook(map: Map) {
-  for (const mesh of tiles(map)) {
-    const material = mesh.material as Material
-    if (!isTileMaterial(material)) continue
-    const tile = material as MeshLambertMaterial | MeshBasicMaterial
-    const data = tile.userData as LookData
-    if (data.source !== undefined) tile.map = data.source
-    data.mono?.dispose()
-    tile.userData = {}
-  }
-}
-
 function heightRange(map: Map) {
   let min = Infinity
   let max = -Infinity
-  for (const mesh of tiles(map)) {
+  for (const { mesh } of placedTiles(map)) {
     const position = mesh.geometry.attributes.position
     for (let i = 0; i < position.count; i++) {
       const z = position.getZ(i)
@@ -159,22 +86,29 @@ export function Terrain({
   // another track in the same area keeps the loaded map
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fit = useMemo(() => next, [next.key])
-  const map = useMemo(
-    () =>
-      new Map({
-        source: new Source({ api: 'eox' }),
-        location: fit.location,
-        options: {
-          nTiles: fit.nTiles,
-          zoom: fit.zoom,
-          tileSize: fit.tileSize,
-          tileSegments: segments,
-          zScale: fit.zScale
-        },
-        material: { lights: true, wireframe: false, fog: true }
-      }),
-    [fit, segments]
-  )
+  const map = useMemo(() => {
+    const style = currentStyle()
+    const map = new Map({
+      source: { api: 'eox' },
+      location: fit.location,
+      options: {
+        nTiles: fit.nTiles,
+        zoom: fit.zoom,
+        tileSize: fit.tileSize,
+        tileSegments: segments,
+        zScale: fit.zScale
+      },
+      material: {
+        wireframe: style.wireframe,
+        process: processor(style),
+        create: terrainMaterial
+      }
+    })
+    map.addLayer(placeholders)
+    return map
+  }, [fit, segments])
+  const look = useSelector(settingsStore, (s) => s.look)
+  const theme = useSelector(uiStore, (s) => s.theme)
 
   useEffect(() => {
     let active = true
@@ -209,14 +143,13 @@ export function Terrain({
     // go on with the tiles that did load; init() refreshes everything later
     let timer = setTimeout(function partial() {
       if (terrainStore.state.ready) return
-      if (map.terrain.children.length > 0) finish()
+      if (placedTiles(map).length > 0) finish()
       else timer = setTimeout(partial, PARTIAL_RETRY)
     }, PARTIAL_AFTER)
     // StrictMode runs this twice in development: clean() aborts the first load
     return () => {
       active = false
       clearTimeout(timer)
-      releaseLook(map)
       map.clean()
       terrainStore.setState((s) =>
         s.map === map ? { ...s, map: null, ready: false, drape: null } : s
@@ -224,21 +157,32 @@ export function Terrain({
     }
   }, [map, fit])
 
-  useFrame(() => {
-    const { imagery, wireframe } = settingsStore.state
-    applyLook(map, imagery, wireframe, uiStore.state.theme)
+  // the look: wireframe is the layers' too, and a processor reloads the
+  // imagery; the rest is made again from the same textures
+  useEffect(() => {
+    const style = LOOK_STYLES[look][theme]
+    const process = processor(style)
+    const options = map.materialOptions
+    if (options.wireframe !== style.wireframe || options.process !== process) {
+      map.setMaterial({ wireframe: style.wireframe, process })
+    } else {
+      for (const tile of placedTiles(map)) tile.restyle()
+    }
+  }, [map, look, theme])
 
-    const meshes = tiles(map)
-    const loaded = meshes.length
-    const textured = meshes.filter((m) =>
-      isTileMaterial(m.material as Material)
-    ).length
+  useFeatureLayers(map)
+  useTerrainBase(map, fit)
+
+  useFrame(() => {
+    const tiles = placedTiles(map)
+    const loaded = tiles.length
+    const done = tiles.filter((tile) => textured.has(tile)).length
     const state = terrainStore.state
     if (
       state.map === map &&
-      (state.loaded !== loaded || state.textured !== textured)
+      (state.loaded !== loaded || state.textured !== done)
     ) {
-      terrainStore.setState((s) => ({ ...s, loaded, textured }))
+      terrainStore.setState((s) => ({ ...s, loaded, textured: done }))
     }
   })
 

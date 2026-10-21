@@ -19,7 +19,8 @@ src/
   lib/                  geo math, locale-aware formatting, terrain fitting
   state/                TanStack stores: settings (persisted), viewer (track, terrain,
                         hover, playback, ui, commands)
-  scene/                R3F scene: terrain, route, markers, grid, base, camera rig, probes
+  scene/                R3F scene: terrain and its looks, map features and base
+                        (layers.ts), route, markers, grid, camera rig, probes
   ui/                   Chooser (start screen + "Change track" dialog), TopBar, panels,
                         overlays/toasts, HelpDialog, Toolbar, controls, pixel icons
 e2e/                    Playwright tests against the production build, tiles mocked
@@ -73,6 +74,30 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   format must still call `useLocale()`. Coordinates stay international
   (decimal point, N/S/E/W). Doto has no Cyrillic: Russian falls back to
   JetBrains Mono in `.dot` text.
+- **Looks.** `settings.look` — `photo`, `mono`, `model`, `wireframe` — is
+  the one choice of how the scene is drawn; each is complete on its own
+  anywhere, mountains or a city. `LOOK_STYLES` (scene/look.ts) gives its
+  imagery (the photo, the photo in gray through a `process`, none), wireframe
+  and the colors of the terrain, base and every feature, per theme. The
+  terrain's material is our `material.create`: it reads the look when the
+  library calls it, so a change restyles the tiles (`tile.restyle()`), and a
+  new `process` or wireframe goes through `map.setMaterial()`. The imagery
+  loads in every look, so switching is immediate; it is credited only where
+  it shows (`showsImagery`). W goes into lines and back to `solidLook`.
+- **Map features** (scene/layers.ts): `Buildings`, `Roads`, `Water`, `Trees`
+  from OpenFreeMap (no key; one vector tile for all four). Which of them show
+  is per look (`lookFeatures`, defaults in `LOOK_FEATURES`: on the photo only
+  buildings, since the photo has the rest), under one switch (`features`, C).
+  A layer joins the map the first time it is shown and is only hidden after
+  that; its colors are fixed when it is made, so another look or theme makes
+  new layers (their tiles come again from the HTTP cache). In lines, water
+  and trees stay solid. Below their `FEATURE_MIN_ZOOM` they draw nothing: the
+  View panel says from which zoom, and the credit (`drawsFeatures`) follows.
+  The base is the library's `TerrainBase`.
+- **`map.terrain` is not a list of tiles**: it also holds the layers' groups.
+  Use `placedTiles(map)` (scene/tiles.ts).
+- **View panel**: the look, exaggeration and what is drawn first; the
+  camera, rendering and input behind "Advanced" (`settings.advanced`).
 - **Hotkeys** (`hotkeys.ts`) match `KeyboardEvent.code`, so they work on any
   layout. Viewer controls are single keys (skipped with Ctrl/⌘/Alt held, in
   text fields, and when `settings.shortcuts` is off — WCAG 2.1.4). Document
@@ -103,25 +128,28 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   shell route for navigations, and a `CacheFirst` tile cache for AWS Terrain
   Tiles and EOX (2000 entries, 30 days). Only tiles that decode are stored,
   and requests with `cache: 'reload'` — three-map-terrain's retry of a
-  truncated body — bypass the cache. `registerType: 'prompt'`: a new version
+  truncated body — bypass the cache. OpenFreeMap: its TileJSON (it names the
+  current planet build) network first, the vector tiles cache first. `registerType: 'prompt'`: a new version
   waits for "Reload" in `UpdateToast` (`SKIP_WAITING` message). The manifest
   has `file_handlers` for `.gpx`; `useLaunchQueue` opens files the installed
   app was launched with. The service worker only exists in production builds.
 - **Settings** persist under `gpx-terrain/settings@1` (the old
   `three-map-terrain/gpx-viewer/settings@1` is read once as a fallback).
-  Unknown or out-of-range stored values fall back to the defaults. The inline
+  Unknown or out-of-range stored values fall back to the defaults; `imagery`
+  and `wireframe` of before looks become a look. The inline
   script in `index.html` applies theme and language before the first paint —
   keep it in sync with `settings.ts` and `i18n/locales.ts`.
-- **Scene** (unchanged from the three-map-terrain demo): `fitTerrain` picks
-  the deepest zoom whose grid holds the track; the route is draped with
+- **Scene**: `fitTerrain` picks the deepest zoom whose grid holds the track
+  (at most 14: a city fits there, with trees); the route is draped with
   `getTerrainPositionSync`; exaggeration is `scale.z` of the world group;
-  imagery and wireframe flip the tiles' own materials in place; the canvas
-  renders on demand while there is no track.
+  the canvas renders on demand while there is no track.
 
 ## Visual conventions
 
 - Black and white, square, no radii, no shadows; tokens in `src/index.css`
   (`--fg`, `--muted`, `--line`…), both themes. Pixel icons in `ui/Icon.tsx`.
+  Color only where the scene has it: the looks' features, and their swatches
+  in the legend.
 - **Vertical alignment is measured, not eyeballed.** Browsers round text
   baselines and the boxes of odd-sized elements to whole CSS pixels. The
   10 px UI text uses a 15 px line height (`--text-2xs--line-height`): its
@@ -146,12 +174,15 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   `// @vitest-environment jsdom`.
 - Playwright: no `devices[...]` presets — they emulate another OS in half of
   `navigator`, and the app picks ⌘ or Ctrl from it. Tile servers are mocked
-  (`e2e/tiles.ts`) with service workers blocked; `pwa.spec.ts` allows them.
+  (`e2e/tiles.ts`: terrain, imagery, OpenFreeMap with empty vector tiles)
+  with service workers blocked; `pwa.spec.ts` allows them.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^2.x`); its version is shown in About
-  (`__LIBRARY_VERSION__`, read from its package.json at build time).
+- `three-map-terrain` comes from npm (`^3.x`); its version is shown in About
+  (`__LIBRARY_VERSION__`, read from its package.json at build time). Until a
+  release is published, work against the local build with `yarn link
+three-map-terrain` (`resolve.dedupe` keeps one three.js).
 - `three` and `@types/three` share the same minor, inside the library's peer
   range.
 - React stays `<19.4` — the `@react-three/fiber` 9.x peer range.

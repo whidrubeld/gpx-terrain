@@ -2,11 +2,13 @@
 // Builds the demo GPX files in public/presets/ from open data:
 //
 // - route geometry: OpenStreetMap (Overpass API), © OpenStreetMap
-//   contributors, ODbL — the shortest path through the ways of each route
+//   contributors, ODbL — the shortest path through the ways of each route, or
+//   through the streets of a city by way of a few places
 // - elevations: AWS Terrain Tiles (terrarium, zoom 14), the same DEM the map uses
 // - timestamps: synthesized — Tobler's hiking function for hikes, a constant
-//   power model for rides — with GPS jitter and a few rest stops. These are not
-//   real recordings; every file says so in its metadata.
+//   power model for rides, Minetti's energy cost of running for runs — with
+//   GPS jitter and a few rest stops. These are not real recordings; every file
+//   says so in its metadata.
 //
 // Usage: node scripts/make-presets.mjs [preset id …]
 // Downloads are cached in scripts/.cache/ (git-ignored). Output is deterministic.
@@ -24,19 +26,40 @@ const USER_AGENT =
 
 const PRESETS = [
   {
-    id: 'eiger-trail',
-    name: 'Eiger Trail',
-    desc: 'Eigergletscher to Alpiglen along the foot of the Eiger north face, Bernese Oberland, Switzerland.',
-    type: 'hiking',
-    osm: { type: 'relation', id: 19465820 },
-    query: 'relation(19465820);way(r)',
-    from: { name: 'Eigergletscher', lat: 46.5753, lon: 7.9739 },
-    to: { name: 'Alpiglen', lat: 46.6187, lon: 8.0013 },
-    start: '2025-07-19T06:24:00Z',
-    interval: 5,
-    model: 'hike',
-    pace: 0.92,
-    stops: [{ at: 0.38, minutes: 14 }]
+    id: 'lausanne',
+    name: 'Ouchy – Sauvabelin',
+    desc: 'A city run from the lake at Ouchy up the old town and its covered stairs, past the cathedral, to the lake in the Sauvabelin woods, Lausanne, Switzerland.',
+    type: 'running',
+    link: {
+      href: 'https://www.openstreetmap.org/#map=15/46.5220/6.6340',
+      text: 'OpenStreetMap: Lausanne'
+    },
+    // the streets, footways and stairs; bridges and tunnels left out, since
+    // the track is draped on the terrain
+    query:
+      'way["highway"~"^(footway|pedestrian|steps|path|living_street|residential|service|unclassified|tertiary|secondary|primary|cycleway|track)$"]["access"!~"^(private|no)$"]["bridge"!~"."]["tunnel"!~"."]["indoor"!~"."](46.503,6.618,46.542,6.648)',
+    from: { name: 'Ouchy', lat: 46.5068, lon: 6.6268 },
+    // the places on the way, and its waypoints: OpenStreetMap elements
+    via: [
+      {
+        osm: 'node/1800313662',
+        name: 'Lausanne station',
+        label: 'Station',
+        sym: 'Ground Transportation'
+      },
+      { osm: 'way/520103359', label: 'Square', sym: 'Crossing' },
+      { osm: 'way/23395578', label: 'Covered stairs', sym: 'Scenic Area' },
+      { osm: 'way/25718547', label: 'Cathedral', sym: 'Church' },
+      { osm: 'way/46834980', label: 'Museum', sym: 'Museum' },
+      { osm: 'way/46828008', label: 'Viewing tower', sym: 'Tall Tower' }
+    ],
+    to: { osm: 'relation/368167', label: 'Lake' },
+    waypoints: 'via',
+    start: '2025-09-14T05:50:00Z',
+    interval: 2,
+    model: 'run',
+    speed: 3.2,
+    stops: [{ at: 0.48, minutes: 2 }]
   },
   {
     id: 'stelvio',
@@ -383,28 +406,58 @@ function nearest(nodes, point) {
   return best
 }
 
+/** A binary min-heap of `[priority, value]`. */
+class Heap {
+  items = []
+  get size() {
+    return this.items.length
+  }
+  push(priority, value) {
+    const { items } = this
+    items.push([priority, value])
+    for (let i = items.length - 1; i > 0;) {
+      const parent = (i - 1) >> 1
+      if (items[parent][0] <= items[i][0]) break
+      ;[items[parent], items[i]] = [items[i], items[parent]]
+      i = parent
+    }
+  }
+  pop() {
+    const { items } = this
+    const top = items[0]
+    const last = items.pop()
+    if (items.length) {
+      items[0] = last
+      for (let i = 0; ;) {
+        const l = 2 * i + 1
+        const r = l + 1
+        let m = i
+        if (l < items.length && items[l][0] < items[m][0]) m = l
+        if (r < items.length && items[r][0] < items[m][0]) m = r
+        if (m === i) break
+        ;[items[m], items[i]] = [items[i], items[m]]
+        i = m
+      }
+    }
+    return top
+  }
+}
+
 function shortestPath(nodes, from, to) {
   const distance = new Map([[from, 0]])
   const previous = new Map()
-  const open = new Set([from])
+  const open = new Heap()
+  open.push(0, from)
   while (open.size) {
-    let current
-    let best = Infinity
-    for (const node of open) {
-      const d = distance.get(node)
-      if (d < best) {
-        best = d
-        current = node
-      }
-    }
-    open.delete(current)
+    const [best, current] = open.pop()
+    if (best > distance.get(current)) continue // a stale entry
     if (current === to) break
     for (const { to: next, length } of current.edges) {
       const d = best + length
       if (d < (distance.get(next) ?? Infinity)) {
         distance.set(next, d)
         previous.set(next, current)
-        open.add(next)
+        open.push(d, next)
       }
     }
   }
@@ -456,6 +509,26 @@ function rideSpeed(grade, power) {
   return Math.min(v, 16)
 }
 
+/** Energy cost of running in J/(kg·m) on a grade (Minetti et al. 2002). */
+const runningCost = (grade) => {
+  const i = Math.max(-0.45, Math.min(0.45, grade))
+  return (
+    155.4 * i ** 5 -
+    30.4 * i ** 4 -
+    43.3 * i ** 3 +
+    46.3 * i ** 2 +
+    19.5 * i +
+    3.6
+  )
+}
+
+/** Running speed in m/s at constant effort: `speed` on the flat. */
+const runSpeed = (grade, speed) =>
+  Math.min(
+    speed * 1.25,
+    Math.max(0.9, (speed * runningCost(0)) / runningCost(grade))
+  )
+
 /**
  * Samples a GPS logger moving along `path` (with DEM elevations): one fix
  * every `interval` s, speed from the activity model, rest stops, jitter.
@@ -474,7 +547,7 @@ async function record(preset, path) {
 
   // elevation smoothed like a barometric altimeter: a ~30 m DEM sampled along
   // switchbacks jumps between the slope above and below the road
-  const window = preset.model === 'ride' ? 150 : 80
+  const window = { ride: 150, hike: 80, run: 60 }[preset.model]
   const raw = await Promise.all(path.map((p) => elevation(p)))
   const ele = raw.map((_, i) => {
     let sum = 0
@@ -522,7 +595,9 @@ async function record(preset, path) {
     const base =
       preset.model === 'ride'
         ? rideSpeed(grade, preset.power)
-        : hikeSpeed(grade, preset.pace)
+        : preset.model === 'run'
+          ? runSpeed(grade, preset.speed)
+          : hikeSpeed(grade, preset.pace)
     const speed = base * (1 + pace() * 0.12)
 
     // advance to the next fix or the end of the segment, whichever comes first
@@ -742,11 +817,15 @@ function gpx(preset, { fixes, waypoints }) {
   const lats = fixes.map((p) => p.lat)
   const lons = fixes.map((p) => p.lon)
   const end = fixes.at(-1).time
-  const osmUrl = `https://www.openstreetmap.org/${preset.osm.type}/${preset.osm.id}`
-  const synthetic =
-    preset.model === 'ride'
-      ? 'Timestamps are synthesized with a constant-power cycling model'
-      : "Timestamps are synthesized with Tobler's hiking function"
+  const link = preset.link ?? {
+    href: `https://www.openstreetmap.org/${preset.osm.type}/${preset.osm.id}`,
+    text: `OpenStreetMap ${preset.osm.type} ${preset.osm.id}`
+  }
+  const synthetic = {
+    ride: 'Timestamps are synthesized with a constant-power cycling model',
+    run: "Timestamps are synthesized with a constant-effort running model (Minetti's energy cost of running on grades)",
+    hike: "Timestamps are synthesized with Tobler's hiking function"
+  }[preset.model]
 
   const wpt = waypoints
     .map(
@@ -780,7 +859,7 @@ function gpx(preset, { fixes, waypoints }) {
       <year>${new Date(end).getUTCFullYear()}</year>
       <license>https://opendatacommons.org/licenses/odbl/1-0/</license>
     </copyright>
-    <link href="${osmUrl}"><text>OpenStreetMap ${preset.osm.type} ${preset.osm.id}</text></link>
+    <link href="${xml(link.href)}"><text>${xml(link.text)}</text></link>
     <time>${iso(end + 4 * 60 * 1000)}</time>
     <keywords>${preset.type}, demo, synthetic timing</keywords>
     <bounds minlat="${Math.min(...lats).toFixed(7)}" minlon="${Math.min(...lons).toFixed(7)}" maxlat="${Math.max(...lats).toFixed(7)}" maxlon="${Math.max(...lons).toFixed(7)}"/>
@@ -799,22 +878,68 @@ ${trkpt}
 
 // ---------------------------------------------------------------- main
 
+/** Places given as OpenStreetMap elements: where they are, and their name. */
+async function resolvePlaces(places) {
+  const elements = places.filter((place) => place.osm)
+  if (!elements.length) return places
+  const query = elements
+    .map(({ osm }) => {
+      const [type, id] = osm.split('/')
+      return `${type}(${id});`
+    })
+    .join('')
+  const found = (await overpass(`(${query});out center tags;`)).elements
+  return places.map((place) => {
+    if (!place.osm) return place
+    const element = found.find((e) => `${e.type}/${e.id}` === place.osm)
+    if (!element) throw new Error(`${place.osm} not found`)
+    const at = element.center ?? element
+    return {
+      ...place,
+      name: place.name ?? element.tags.name,
+      lat: at.lat,
+      lon: at.lon
+    }
+  })
+}
+
 async function build(preset) {
-  console.log(`${preset.id}: fetching ${preset.osm.type} ${preset.osm.id}`)
+  console.log(
+    `${preset.id}: fetching ${preset.osm ? `${preset.osm.type} ${preset.osm.id}` : 'the streets'}`
+  )
   const { elements } = await overpass(`${preset.query};out geom;`)
   const ways = elements.filter((e) => e.type === 'way' && e.geometry)
   const nodes = buildGraph(ways)
 
-  const from = nearest(nodes, preset.from)
+  const highest = preset.to === 'highest'
+  const [start, ...stops] = await resolvePlaces([
+    preset.from,
+    ...(preset.via ?? []),
+    ...(highest ? [] : [preset.to])
+  ])
+  const via = highest ? stops : stops.slice(0, -1)
+  const end = highest ? undefined : stops.at(-1)
+
+  const from = nearest(nodes, start)
   let to
-  if (preset.to === 'highest') {
+  if (highest) {
     const heights = await Promise.all(nodes.map((n) => elevation(n)))
     to = nodes[heights.indexOf(Math.max(...heights))]
   } else {
-    to = nearest(nodes, preset.to)
+    to = nearest(nodes, end)
   }
 
-  const path = densify(shortestPath(nodes, from, to), 4)
+  // by way of the places in between, if any; where each is reached (m)
+  const places = [from, ...via.map((p) => nearest(nodes, p)), to]
+  const reached = [0]
+  const route = places.slice(1).flatMap((place, i) => {
+    const leg = shortestPath(nodes, places[i], place)
+    let length = reached[i]
+    for (let k = 1; k < leg.length; k++) length += haversine(leg[k - 1], leg[k])
+    reached.push(length)
+    return i === 0 ? leg : leg.slice(1)
+  })
+  const path = densify(route, 4)
   const { fixes, distance } = await record(preset, path)
 
   const along = [0]
@@ -822,7 +947,37 @@ async function build(preset) {
     along.push(along[i - 1] + haversine(fixes[i - 1], fixes[i]))
   const scale = along.at(-1) / distance
 
-  const pois = await pointsOfInterest(preset, path, distance)
+  // the places on the way, or what lies along it
+  const sights =
+    preset.waypoints === 'via'
+      ? via.map((place, i) => ({
+          lat: place.lat,
+          lon: place.lon,
+          name: place.name,
+          desc: place.label,
+          link: `https://www.openstreetmap.org/${place.osm}`,
+          sym: place.sym,
+          type: place.label.toLowerCase(),
+          time: timeAt(fixes, along, reached[i + 1] * scale)
+        }))
+      : (await pointsOfInterest(preset, path, distance)).map(
+          ({ element, kind, at }) => ({
+            lat: element.lat,
+            lon: element.lon,
+            name: element.tags.name ?? kind.label,
+            desc: [
+              kind.label,
+              element.tags.ele && `${element.tags.ele} m`,
+              element.tags.description
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            link: `https://www.openstreetmap.org/${element.type}/${element.id}`,
+            sym: kind.sym,
+            type: kind.label.toLowerCase(),
+            time: timeAt(fixes, along, at * scale)
+          })
+        )
   const endpoint = (point, name, time, type) => ({
     ...point,
     name,
@@ -831,26 +986,11 @@ async function build(preset) {
     type
   })
   const waypoints = [
-    endpoint(fixes[0], preset.from.name, fixes[0].time, 'start'),
-    ...pois.map(({ element, kind, at }) => ({
-      lat: element.lat,
-      lon: element.lon,
-      name: element.tags.name ?? kind.label,
-      desc: [
-        kind.label,
-        element.tags.ele && `${element.tags.ele} m`,
-        element.tags.description
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      link: `https://www.openstreetmap.org/${element.type}/${element.id}`,
-      sym: kind.sym,
-      type: kind.label.toLowerCase(),
-      time: timeAt(fixes, along, at * scale)
-    })),
+    endpoint(fixes[0], start.name, fixes[0].time, 'start'),
+    ...sights,
     endpoint(
       fixes.at(-1),
-      preset.toName ?? preset.to.name,
+      preset.toName ?? end.name,
       fixes.at(-1).time,
       'finish'
     )
@@ -864,7 +1004,7 @@ async function build(preset) {
   const hours = (fixes.at(-1).time - fixes[0].time) / 3.6e6
   console.log(
     `  ${(distance / 1000).toFixed(2)} km, ${fixes.length} fixes, ${hours.toFixed(2)} h, ` +
-      `${waypoints.length} waypoints (${pois.map((p) => p.element.tags.name ?? p.kind.label).join(', ')})`
+      `${waypoints.length} waypoints (${sights.map((w) => w.name).join(', ')})`
   )
 }
 

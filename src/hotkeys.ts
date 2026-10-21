@@ -15,14 +15,15 @@
 import { PRESETS } from './gpx/presets'
 import type { MessageKey } from './i18n'
 import {
+  cycleLook,
   cycleSetting,
-  IMAGERY_OPTIONS,
   nudgeExaggeration,
   PIXEL_OPTIONS,
   settingsStore,
   THEMES,
   toggleSetting,
-  togglePanel
+  togglePanel,
+  toggleWireframe
 } from './state/settings'
 import {
   loadPreset,
@@ -188,16 +189,23 @@ export const HOTKEYS: readonly Hotkey[] = [
   {
     codes: ['KeyI'],
     keys: ['I'],
-    label: 'help.keys.imagery',
+    label: 'help.keys.look',
     group: 'layers',
-    run: () => cycleSetting('imagery', IMAGERY_OPTIONS)
+    run: cycleLook
   },
   {
     codes: ['KeyW'],
     keys: ['W'],
     label: 'help.keys.wireframe',
     group: 'layers',
-    run: () => toggleSetting('wireframe')
+    run: toggleWireframe
+  },
+  {
+    codes: ['KeyC'],
+    keys: ['C'],
+    label: 'help.keys.features',
+    group: 'layers',
+    run: () => toggleSetting('features')
   },
   {
     codes: ['KeyG'],

@@ -1,13 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo, useRef } from 'react'
-import {
-  Box3,
-  MathUtils,
-  type Mesh,
-  type PerspectiveCamera,
-  Vector3
-} from 'three'
+import { Box3, MathUtils, type PerspectiveCamera, Vector3 } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import type { Map } from 'three-map-terrain'
 
@@ -26,6 +20,7 @@ import {
 import { lineAt, surfacePoint } from './drape'
 import { easeInOutCubic, frameStep, INTRO } from './look'
 import { sceneRefs } from './refs'
+import { placedTiles } from './tiles'
 
 interface Pose {
   position: Vector3
@@ -262,14 +257,13 @@ function useTerrainBox() {
   return () => {
     const { map } = terrainStore.state
     if (!map) return null
-    const count = map.terrain.children.length
+    const tiles = placedTiles(map)
     const entry = cache.current
-    if (entry.map !== map || entry.count !== count) {
+    if (entry.map !== map || entry.count !== tiles.length) {
       entry.map = map
-      entry.count = count
+      entry.count = tiles.length
       entry.box.makeEmpty()
-      for (const tile of map.terrain.children) {
-        const mesh = tile as Mesh
+      for (const { mesh } of tiles) {
         mesh.geometry.computeBoundingBox()
         const local = mesh.geometry.boundingBox
         if (local) entry.box.union(local.clone().translate(mesh.position))

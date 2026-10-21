@@ -2,7 +2,7 @@ import { PerspectiveCamera } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import { describe, expect, it } from 'vitest'
 
-import { frameStep } from './look'
+import { frameStep, monochrome } from './look'
 
 describe('frameStep', () => {
   it('passes ordinary frames through', () => {
@@ -37,5 +37,25 @@ describe('frameStep', () => {
     // what 0.1 s of rotation turns, not 100 s (5.2 rad, most of a turn)
     const perSecond = ((2 * Math.PI) / 60) * controls.autoRotateSpeed
     expect(Math.abs(turned)).toBeCloseTo(perSecond * 0.1, 4)
+  })
+})
+
+describe('monochrome', () => {
+  it('turns the imagery gray, with a little more contrast', async () => {
+    // pure red, a mid gray and white, in a stand-in for a 2D context
+    const data = new Uint8ClampedArray([
+      255, 0, 0, 255, 118, 118, 118, 255, 255, 255, 255, 255
+    ])
+    const image = { data, width: 3, height: 1 } as ImageData
+    let written: ImageData | undefined
+    const context = {
+      getImageData: () => image,
+      putImageData: (next: ImageData) => (written = next)
+    } as unknown as CanvasRenderingContext2D
+    await monochrome(context, { width: 3, height: 1, z: 0, x: 0, y: 0 })
+    expect(written).toBe(image)
+    expect([...data]).toEqual([
+      48, 48, 48, 255, 128, 128, 128, 255, 255, 255, 255, 255
+    ])
   })
 })

@@ -26,8 +26,8 @@ test.describe('language', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
     await expect(page.getByText('Перетащите сюда файл .gpx')).toBeVisible()
     await expect(
-      page.getByRole('button', { name: /Eiger Trail/ })
-    ).toContainText('Пеший поход')
+      page.getByRole('button', { name: /Ouchy – Sauvabelin/ })
+    ).toContainText('Бег')
 
     await page.getByTitle('English').click()
     await expect(page.getByText('Drop a .gpx file here')).toBeVisible()
@@ -43,11 +43,13 @@ test('starts with the chooser, opens an example and changes it', async ({
   await mockTileServers(page)
   await page.goto('/')
   await expect(page).toHaveTitle(/^GPX Terrain/)
-  await page.getByRole('button', { name: /Eiger Trail/ }).click()
+  await page.getByRole('button', { name: /Ouchy – Sauvabelin/ }).click()
 
-  const title = page.getByRole('button', { name: 'Change track: Eiger Trail' })
+  const title = page.getByRole('button', {
+    name: 'Change track: Ouchy – Sauvabelin'
+  })
   await expect(title).toBeVisible()
-  await expect(page).toHaveTitle('Eiger Trail · GPX Terrain')
+  await expect(page).toHaveTitle('Ouchy – Sauvabelin · GPX Terrain')
   await expect(page.getByRole('contentinfo')).toContainText('Img 9/9', {
     timeout: 60_000
   })
@@ -145,15 +147,47 @@ test('single-key shortcuts can be switched off', async ({ page }) => {
   await mockTileServers(page)
   await page.goto('/')
   await page.keyboard.press('Digit1')
-  const wireframe = page.getByRole('switch', { name: /^Wireframe/ })
-  await expect(wireframe).not.toBeChecked()
+  const wire = page.getByRole('radio', { name: 'Wire' })
+  await expect(wire).not.toBeChecked()
   await page.keyboard.press('KeyW')
-  await expect(wireframe).toBeChecked()
+  await expect(wire).toBeChecked()
 
+  // in the advanced settings, closed at first
+  await page.getByRole('button', { name: 'Advanced' }).click()
   await page.getByText('Keyboard shortcuts', { exact: true }).click()
   await page.keyboard.press('KeyW')
-  await expect(wireframe).toBeChecked()
+  await expect(wire).toBeChecked()
   await expect(
     page.getByRole('switch', { name: /^Keyboard shortcuts/ })
   ).not.toBeChecked()
+})
+
+test('every style shows its own map features', async ({ page }) => {
+  await mockTileServers(page)
+  await page.goto('/')
+  await page.keyboard.press('Digit1')
+  // the inputs are visually hidden: click their labels
+  const choose = (name: string) =>
+    page.getByRole('radio', { name }).locator('xpath=..').click()
+  const buildings = page.getByRole('switch', { name: /^Buildings/ })
+  const roads = page.getByRole('switch', { name: /^Roads/ })
+
+  // on the photo, only what it lacks
+  await expect(buildings).toBeChecked()
+  await expect(roads).not.toBeChecked()
+  await choose('Model')
+  await expect(roads).toBeChecked()
+  await roads.locator('xpath=..').click()
+  await choose('Photo')
+  await expect(roads).not.toBeChecked()
+  await choose('Model')
+  await expect(roads).not.toBeChecked()
+  await expect(buildings).toBeChecked()
+
+  // C hides them all, and their switches with them
+  await page.keyboard.press('KeyC')
+  await expect(
+    page.getByRole('switch', { name: /^Map features/ })
+  ).not.toBeChecked()
+  await expect(buildings).toBeHidden()
 })

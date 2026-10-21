@@ -10,7 +10,9 @@ import {
   formatLon,
   joinParts
 } from '../lib/format'
-import { settingsStore } from '../state/settings'
+import { drawsFeatures } from '../scene/layers'
+import { showsImagery } from '../scene/look'
+import { settingsStore, shownFeatures } from '../state/settings'
 import { hoverStore, terrainStore, viewerStore } from '../state/viewer'
 import { useOnline } from './controls'
 import { LIBRARY } from './Toolbar'
@@ -33,6 +35,12 @@ export function StatusBar() {
   )
   const exaggeration = useSelector(settingsStore, (s) => s.exaggeration)
   const preset = useSelector(viewerStore, (s) => s.source?.kind === 'preset')
+  const features = useSelector(
+    settingsStore,
+    (s) =>
+      terrain.fit !== null && drawsFeatures(shownFeatures(s), terrain.fit.zoom)
+  )
+  const imagery = useSelector(settingsStore, (s) => showsImagery(s.look))
 
   return (
     <footer className='panel pointer-events-auto flex h-7 items-center gap-4 overflow-hidden px-2.5 text-3xs font-semibold uppercase tracking-[0.12em] tabular-nums'>
@@ -70,7 +78,7 @@ export function StatusBar() {
 
       <span className='min-w-0 flex-1 truncate text-muted'>
         <Rich
-          text={t('status.attribution')}
+          text={t(imagery ? 'status.attribution' : 'status.elevation')}
           parts={{
             imagery: (
               <a
@@ -94,12 +102,32 @@ export function StatusBar() {
             )
           }}
         />
-        {preset && (
+        {features ? (
           <>
             {' · '}
             <Rich
-              text={t('status.routes')}
+              text={t('status.mapData')}
               parts={{
+                openfreemap: (
+                  <a
+                    className={link}
+                    href='https://openfreemap.org'
+                    target='_blank'
+                    rel='noreferrer'
+                  >
+                    OpenFreeMap
+                  </a>
+                ),
+                openmaptiles: (
+                  <a
+                    className={link}
+                    href='https://www.openmaptiles.org'
+                    target='_blank'
+                    rel='noreferrer'
+                  >
+                    OpenMapTiles
+                  </a>
+                ),
                 osm: (
                   <a
                     className={link}
@@ -113,6 +141,27 @@ export function StatusBar() {
               }}
             />
           </>
+        ) : (
+          preset && (
+            <>
+              {' · '}
+              <Rich
+                text={t('status.routes')}
+                parts={{
+                  osm: (
+                    <a
+                      className={link}
+                      href='https://www.openstreetmap.org/copyright'
+                      target='_blank'
+                      rel='noreferrer'
+                    >
+                      OpenStreetMap
+                    </a>
+                  )
+                }}
+              />
+            </>
+          )
         )}
       </span>
       <a

@@ -3,14 +3,44 @@ import { createStore } from '@tanstack/react-store'
 import { type LanguageSetting, LOCALES } from '../i18n/locales'
 
 export type ThemeSetting = 'system' | 'dark' | 'light'
-export type Imagery = 'color' | 'mono' | 'relief'
 export type PanelId = 'track' | 'view' | 'legend' | 'perf' | 'profile'
+
+/**
+ * How the terrain and its features are drawn — each look complete on its
+ * own, anywhere (see scene/look.ts): the photo, the photo in gray, a
+ * colored model without the photo, lines.
+ */
+export const LOOKS = ['photo', 'mono', 'model', 'wireframe'] as const
+export type Look = (typeof LOOKS)[number]
+export type SolidLook = Exclude<Look, 'wireframe'>
+
+/** Map features drawn on the terrain from OpenStreetMap (see scene/layers.ts). */
+export const FEATURES = ['buildings', 'roads', 'water', 'trees'] as const
+export type Feature = (typeof FEATURES)[number]
+export type FeatureSet = Record<Feature, boolean>
+
+/**
+ * The features each look shows until they are changed: on the photo only
+ * what it lacks — the height of buildings; roads too on the gray one;
+ * everything on the model and in lines.
+ */
+export const LOOK_FEATURES: Readonly<Record<Look, Readonly<FeatureSet>>> = {
+  photo: { buildings: true, roads: false, water: false, trees: false },
+  mono: { buildings: true, roads: true, water: false, trees: false },
+  model: { buildings: true, roads: true, water: true, trees: true },
+  wireframe: { buildings: true, roads: true, water: true, trees: true }
+}
 
 export interface Settings {
   theme: ThemeSetting
   language: LanguageSetting
-  imagery: Imagery
-  wireframe: boolean
+  look: Look
+  /** the look W goes back to from wireframe */
+  solidLook: SolidLook
+  /** map features on the terrain at all (C) */
+  features: boolean
+  /** which features each look shows */
+  lookFeatures: Record<Look, FeatureSet>
   animations: boolean
   autoRotate: boolean
   fog: boolean
@@ -21,6 +51,8 @@ export interface Settings {
   follow: boolean
   /** single-key shortcuts (⌘/Ctrl combinations always work) */
   shortcuts: boolean
+  /** the advanced view settings are open */
+  advanced: boolean
   /** vertical exaggeration, applied as `scale.z` (free, no reload) */
   exaggeration: number
   /** `MapOptions.tileSegments` (rebuilds the map) */
@@ -35,7 +67,6 @@ export interface Settings {
 export const SEGMENT_OPTIONS = [64, 128, 192] as const
 export const TILE_OPTIONS = [3, 5] as const
 export const PIXEL_OPTIONS = [1, 2, 3, 4] as const
-export const IMAGERY_OPTIONS = ['color', 'mono', 'relief'] as const
 export const EXAGGERATION = { min: 1, max: 3, step: 0.25 } as const
 export const THEMES: readonly ThemeSetting[] = ['system', 'dark', 'light']
 const LANGUAGES: readonly LanguageSetting[] = ['auto', ...LOCALES]
@@ -53,8 +84,15 @@ function defaults(): Settings {
   return {
     theme: 'system',
     language: 'auto',
-    imagery: 'color',
-    wireframe: false,
+    look: 'photo',
+    solidLook: 'photo',
+    features: true,
+    lookFeatures: {
+      photo: { ...LOOK_FEATURES.photo },
+      mono: { ...LOOK_FEATURES.mono },
+      model: { ...LOOK_FEATURES.model },
+      wireframe: { ...LOOK_FEATURES.wireframe }
+    },
     animations: !media('(prefers-reduced-motion: reduce)'),
     autoRotate: false,
     fog: true,
@@ -64,6 +102,7 @@ function defaults(): Settings {
     base: true,
     follow: false,
     shortcuts: true,
+    advanced: false,
     exaggeration: 1.25,
     segments: 128,
     tiles: 3,
@@ -78,6 +117,31 @@ function defaults(): Settings {
   }
 }
 
+const isLook = (value: unknown): value is Look =>
+  (LOOKS as readonly unknown[]).includes(value)
+
+/** The look of the settings before looks: imagery and wireframe apart. */
+function legacyLook({ imagery, wireframe }: Record<string, unknown>) {
+  if (wireframe === true) return 'wireframe'
+  return imagery === 'mono' ? 'mono' : imagery === 'relief' ? 'model' : 'photo'
+}
+
+/** Booleans of `stored` where `base` has them; nested objects key by key. */
+function mergeBooleans<T extends Record<string, unknown>>(
+  base: T,
+  stored: unknown
+): T {
+  const source = (stored ?? {}) as Record<string, unknown>
+  const merged: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(base)) {
+    if (typeof value === 'object' && value !== null)
+      merged[key] = mergeBooleans(value as Record<string, unknown>, source[key])
+    else if (typeof value === 'boolean' && typeof source[key] === 'boolean')
+      merged[key] = source[key]
+  }
+  return merged as T
+}
+
 /** Stored values of the right type override the defaults; anything else is ignored. */
 function load(): Settings {
   const base = defaults()
@@ -89,24 +153,26 @@ function load(): Settings {
     ) as Record<string, unknown>
     const merged: Record<string, unknown> = { ...base }
     for (const [key, value] of Object.entries(base)) {
-      if (key === 'panels') continue
+      if (key === 'panels' || key === 'lookFeatures') continue
       if (typeof stored[key] === typeof value) merged[key] = stored[key]
     }
-    const panels = stored.panels as Record<string, unknown> | undefined
-    merged.panels = { ...base.panels }
-    for (const id of Object.keys(base.panels) as PanelId[]) {
-      if (typeof panels?.[id] === 'boolean')
-        (merged.panels as Settings['panels'])[id] = panels[id]
-    }
+    merged.panels = mergeBooleans(base.panels, stored.panels)
+    merged.lookFeatures = mergeBooleans(base.lookFeatures, stored.lookFeatures)
     const settings = merged as unknown as Settings
+    if (!isLook(stored.look)) settings.look = legacyLook(stored)
+    const solid = stored.solidLook
+    settings.solidLook =
+      isLook(solid) && solid !== 'wireframe'
+        ? solid
+        : settings.look === 'wireframe'
+          ? 'photo'
+          : settings.look
     if (!(SEGMENT_OPTIONS as readonly number[]).includes(settings.segments))
       settings.segments = base.segments
     if (!(TILE_OPTIONS as readonly number[]).includes(settings.tiles))
       settings.tiles = base.tiles
     if (!(PIXEL_OPTIONS as readonly number[]).includes(settings.pixelSize))
       settings.pixelSize = 1
-    if (!(IMAGERY_OPTIONS as readonly string[]).includes(settings.imagery))
-      settings.imagery = 'color'
     if (!THEMES.includes(settings.theme)) settings.theme = base.theme
     if (!LANGUAGES.includes(settings.language))
       settings.language = base.language
@@ -152,8 +218,45 @@ export function togglePanel(id: PanelId, open?: boolean) {
   }))
 }
 
+export function setLook(look: Look) {
+  settingsStore.setState((s) =>
+    s.look === look
+      ? s
+      : { ...s, look, solidLook: look === 'wireframe' ? s.solidLook : look }
+  )
+}
+
+/** The next look, wrapping around. */
+export const cycleLook = () =>
+  setLook(LOOKS[(LOOKS.indexOf(settingsStore.state.look) + 1) % LOOKS.length])
+
+/** Into lines, and back to the look before. */
+export const toggleWireframe = () =>
+  setLook(
+    settingsStore.state.look === 'wireframe'
+      ? settingsStore.state.solidLook
+      : 'wireframe'
+  )
+
+/** Shows or hides a feature in the current look. */
+export function setLookFeature(feature: Feature, shown: boolean) {
+  settingsStore.setState((s) => ({
+    ...s,
+    lookFeatures: {
+      ...s.lookFeatures,
+      [s.look]: { ...s.lookFeatures[s.look], [feature]: shown }
+    }
+  }))
+}
+
+/** The features drawn now: the look's, unless features are off. */
+export const shownFeatures = (settings: Settings): FeatureSet =>
+  settings.features
+    ? settings.lookFeatures[settings.look]
+    : { buildings: false, roads: false, water: false, trees: false }
+
 /** Steps through a list of options, wrapping around. */
-export function cycleSetting<K extends 'imagery' | 'pixelSize' | 'theme'>(
+export function cycleSetting<K extends 'pixelSize' | 'theme'>(
   key: K,
   options: readonly Settings[K][]
 ) {

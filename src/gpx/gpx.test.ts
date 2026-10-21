@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 
 import bright from '../../public/presets/bright-angel.gpx?raw'
-import eiger from '../../public/presets/eiger-trail.gpx?raw'
+import lausanne from '../../public/presets/lausanne.gpx?raw'
 import stelvio from '../../public/presets/stelvio.gpx?raw'
 import { GpxError, parseGpx } from './parse'
 import { PRESETS } from './presets'
@@ -105,7 +105,7 @@ describe('buildTrack', () => {
 
   it('computes plausible stats for the presets', () => {
     const cases = [
-      { text: eiger, km: [5.5, 6.2], descent: [600, 1000], hours: [1.5, 2.5] },
+      { text: lausanne, km: [4.3, 5], ascent: [250, 350], hours: [0.5, 0.8] },
       { text: stelvio, km: [23, 25], ascent: [1700, 2000], hours: [1.8, 3] },
       { text: bright, km: [12, 13], descent: [1200, 1500], hours: [3, 4.5] }
     ]
@@ -131,7 +131,7 @@ describe('buildTrack', () => {
   })
 
   it('matches the stats the chooser shows before loading', () => {
-    const files = { 'eiger-trail': eiger, stelvio, 'bright-angel': bright }
+    const files = { lausanne, stelvio, 'bright-angel': bright }
     for (const preset of PRESETS) {
       const track = buildTrack(parseGpx(files[preset.id]), preset.id)
       expect(track.name).toBe(preset.name)
@@ -144,7 +144,7 @@ describe('buildTrack', () => {
   })
 
   it('maps playback progress to points and back', () => {
-    const track = buildTrack(parseGpx(eiger), 'preset')
+    const track = buildTrack(parseGpx(lausanne), 'preset')
     expect(indexAtProgress(track, 0)).toBe(0)
     expect(indexAtProgress(track, 1)).toBe(track.points.length - 1)
     for (const p of [0.1, 0.5, 0.93]) {

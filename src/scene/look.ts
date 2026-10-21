@@ -1,6 +1,11 @@
 import { CanvasTexture, NearestFilter, SRGBColorSpace } from 'three'
+import {
+  CROWN_COLOR,
+  type ImageryProcessor,
+  WATER_COLOR
+} from 'three-map-terrain'
 
-import { settingsStore } from '../state/settings'
+import { type Look, settingsStore } from '../state/settings'
 import { terrainStore } from '../state/viewer'
 
 /** Scene colors per theme; the 2D tokens live in index.css. */
@@ -10,7 +15,6 @@ export const PALETTE = {
     fg: '#f4f4f4',
     halo: '#000000',
     relief: '#5a5a5a',
-    wall: '#141414',
     edge: '#8c8c8c'
   },
   light: {
@@ -18,12 +22,141 @@ export const PALETTE = {
     fg: '#0a0a0a',
     halo: '#ffffff',
     relief: '#e4e4e4',
-    wall: '#dcdcdc',
     edge: '#6e6e6e'
   }
 } as const
 
-export type Palette = (typeof PALETTE)[keyof typeof PALETTE]
+export type Theme = keyof typeof PALETTE
+export type Palette = (typeof PALETTE)[Theme]
+
+/** How a look draws the terrain and the map features, in one theme. */
+export interface LookStyle {
+  /** the photo, the photo in gray, or none */
+  imagery: 'color' | 'mono' | null
+  wireframe: boolean
+  /** the terrain without imagery — and while its imagery loads */
+  terrain: string
+  /** the sides of the terrain base, or its outline */
+  base: string
+  buildings: string
+  roads: string
+  water: string
+  trees: string
+}
+
+/**
+ * The looks. On the photo, features keep the colors of the library (white
+ * buildings, blue water, green trees); on the gray photo they are gray; the
+ * model is a colored map in relief; in lines, the terrain is a quiet grid
+ * and every feature has a color of its own, so that none merges into it.
+ */
+export const LOOK_STYLES: Readonly<
+  Record<Look, Readonly<Record<Theme, LookStyle>>>
+> = {
+  photo: {
+    dark: {
+      imagery: 'color',
+      wireframe: false,
+      terrain: PALETTE.dark.relief,
+      base: '#262626',
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: WATER_COLOR,
+      trees: CROWN_COLOR
+    },
+    light: {
+      imagery: 'color',
+      wireframe: false,
+      terrain: PALETTE.light.relief,
+      base: '#d4d4d4',
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: WATER_COLOR,
+      trees: CROWN_COLOR
+    }
+  },
+  mono: {
+    dark: {
+      imagery: 'mono',
+      wireframe: false,
+      terrain: PALETTE.dark.relief,
+      base: '#262626',
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: '#404040',
+      trees: '#303030'
+    },
+    light: {
+      imagery: 'mono',
+      wireframe: false,
+      terrain: PALETTE.light.relief,
+      base: '#d4d4d4',
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: '#a8a8a8',
+      trees: '#8c8c8c'
+    }
+  },
+  model: {
+    dark: {
+      imagery: null,
+      wireframe: false,
+      terrain: '#57544e',
+      base: '#2b2a28',
+      buildings: '#dcdcdc',
+      roads: '#a39e95',
+      water: '#3d6b92',
+      trees: '#4d7540'
+    },
+    light: {
+      imagery: null,
+      wireframe: false,
+      terrain: '#e6e0d4',
+      base: '#b9b2a4',
+      buildings: '#ffffff',
+      roads: '#faf8f3',
+      water: '#8fb8d9',
+      trees: '#7fa463'
+    }
+  },
+  wireframe: {
+    dark: {
+      imagery: null,
+      wireframe: true,
+      terrain: '#3d3d3d',
+      base: '#6a6a6a',
+      buildings: '#b4b4b4',
+      roads: '#e0a24a',
+      water: '#2f6496',
+      trees: '#5fae52'
+    },
+    light: {
+      imagery: null,
+      wireframe: true,
+      terrain: '#c4c4c4',
+      base: '#9a9a9a',
+      buildings: '#6e6e6e',
+      roads: '#c7801f',
+      water: '#86b6e0',
+      trees: '#4a9a42'
+    }
+  }
+}
+
+/** Whether a look shows the photo: then it is credited. */
+export const showsImagery = (look: Look) =>
+  LOOK_STYLES[look].dark.imagery !== null
+
+/** The `mono` imagery: luminance, with a little extra contrast. */
+export const monochrome: ImageryProcessor = (context, { width, height }) => {
+  const pixels = context.getImageData(0, 0, width, height)
+  const { data } = pixels
+  for (let i = 0; i < data.length; i += 4) {
+    const luma = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]
+    data[i] = data[i + 1] = data[i + 2] = (luma - 118) * 1.25 + 128
+  }
+  context.putImageData(pixels, 0, 0)
+}
 
 // ------------------------------------------------------------ intro timeline
 

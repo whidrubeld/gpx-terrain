@@ -1,4 +1,4 @@
-import { useSelector } from '@tanstack/react-store'
+import { shallow, useSelector } from '@tanstack/react-store'
 import type { ReactNode } from 'react'
 
 import { useT } from '../i18n'
@@ -8,10 +8,11 @@ import {
   formatDecimal,
   joinParts
 } from '../lib/format'
-import { settingsStore } from '../state/settings'
-import { terrainStore, viewerStore } from '../state/viewer'
+import { FEATURES, settingsStore, shownFeatures } from '../state/settings'
+import { terrainStore, uiStore, viewerStore } from '../state/viewer'
 import { graticuleStep } from '../scene/Graticule'
-import { GLYPHS, type GlyphName } from '../scene/look'
+import { FEATURE_MIN_ZOOM } from '../scene/layers'
+import { GLYPHS, type GlyphName, LOOK_STYLES } from '../scene/look'
 import { markStep } from '../scene/Markers'
 import { Panel } from './controls'
 
@@ -64,6 +65,36 @@ function Line({
   )
 }
 
+/** A map feature's color in the current look: a block, or a line in wireframe. */
+function Swatch({ color, line }: { color: string; line: boolean }) {
+  return (
+    <svg width={28} height={8} aria-hidden>
+      {line ? (
+        <line
+          x1={0}
+          x2={28}
+          y1={4}
+          y2={4}
+          stroke={color}
+          strokeWidth={2}
+          shapeRendering='crispEdges'
+        />
+      ) : (
+        <rect
+          x={6}
+          y={0}
+          width={16}
+          height={8}
+          fill={color}
+          stroke='currentColor'
+          strokeOpacity={0.4}
+          shapeRendering='crispEdges'
+        />
+      )}
+    </svg>
+  )
+}
+
 function Row({
   symbol,
   label,
@@ -103,7 +134,16 @@ export function LegendBody() {
   const fit = useSelector(terrainStore, (s) => s.fit)
   const heights = useSelector(terrainStore, (s) => s.heights)
   const exaggeration = useSelector(settingsStore, (s) => s.exaggeration)
+  const look = useSelector(settingsStore, (s) => s.look)
+  const shown = useSelector(settingsStore, shownFeatures, { compare: shallow })
+  const theme = useSelector(uiStore, (s) => s.theme)
   const step = fit ? graticuleStep(fit) : null
+  const style = LOOK_STYLES[look][theme]
+  // the features drawn at this zoom
+  const features = FEATURES.filter(
+    (feature) =>
+      shown[feature] && fit !== null && fit.zoom >= FEATURE_MIN_ZOOM[feature]
+  )
 
   return (
     <>
@@ -145,6 +185,22 @@ export function LegendBody() {
           label={t('legend.graticule')}
           detail={step ? `${step}°` : undefined}
         />
+        {features.map((feature) => (
+          <Row
+            key={feature}
+            symbol={
+              <Swatch
+                color={style[feature]}
+                // in lines, water and trees stay solid
+                line={
+                  style.wireframe &&
+                  (feature === 'buildings' || feature === 'roads')
+                }
+              />
+            }
+            label={t(`view.${feature}`)}
+          />
+        ))}
       </ul>
 
       {fit && (

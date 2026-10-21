@@ -37,7 +37,7 @@
     "credits": "Example routes © OpenStreetMap contributors (ODbL); their timing is synthesized."
   },
   "presets": {
-    "eiger-trail": "Switzerland · Bernese Oberland",
+    "lausanne": "Switzerland · Lausanne",
     "stelvio": "Italy · South Tyrol",
     "bright-angel": "USA · Grand Canyon"
   },
@@ -121,13 +121,27 @@
     "start": "Start",
     "finish": "Finish"
   },
-  "view": {
-    "imagery": "Imagery",
-    "color": "Color",
+  "look": {
+    "label": "Style",
+    "photo": "Photo",
     "mono": "Mono",
-    "relief": "Relief",
+    "model": "Model",
+    "wireframe": "Wire",
+    "about": {
+      "photo": "Satellite photo · 3D buildings on it",
+      "mono": "The photo in gray · white buildings and roads",
+      "model": "A colored model · buildings, roads, water, trees",
+      "wireframe": "Lines · every feature in a color of its own"
+    }
+  },
+  "view": {
     "exaggeration": "Exaggeration",
-    "wireframe": "Wireframe",
+    "features": "Map features",
+    "buildings": "Buildings",
+    "roads": "Roads",
+    "water": "Water",
+    "trees": "Trees",
+    "fromZoom": "From Z{zoom}",
     "graticule": "Coordinate grid",
     "distanceMarks": "Distance marks",
     "waypoints": "Waypoints",
@@ -137,11 +151,12 @@
     "follow": "Follow playhead",
     "animations": "Animations",
     "shortcuts": "Keyboard shortcuts",
+    "advanced": "Advanced",
     "pixelSize": "Pixel size",
     "off": "Off",
     "tiles": "Tiles",
     "mesh": "Mesh",
-    "note": "Tiles and mesh rebuild the map. Everything else changes the loaded tiles in place."
+    "note": "Tiles and mesh rebuild the map. Everything else changes it in place."
   },
   "legend": {
     "travelled": "Route · travelled",
@@ -190,9 +205,13 @@
     "offTerrain": "— off terrain —",
     "offline": "Offline",
     "attribution": "Imagery {imagery} (Copernicus Sentinel data 2016) · Elevation {elevation}",
+    "elevation": "Elevation {elevation}",
     "routes": "Routes © {osm} contributors",
     "attributionShort": "© EOX Sentinel-2 cloudless 2016 · AWS Terrain Tiles",
+    "elevationShort": "AWS Terrain Tiles",
     "routesShort": "Routes © OpenStreetMap",
+    "mapData": "Map {openfreemap} © {openmaptiles} © {osm} contributors",
+    "mapDataShort": "© OpenFreeMap · OpenMapTiles · OpenStreetMap",
     "builtWith": "Built with three-map-terrain ↗"
   },
   "loading": {
@@ -285,12 +304,13 @@
       "pixelSize": "Pixel size",
       "animations": "Animations",
       "theme": "Theme: auto / dark / light",
-      "imagery": "Imagery: color / mono / relief",
-      "wireframe": "Wireframe",
+      "look": "Style: photo / mono / model / wire",
+      "wireframe": "Wireframe and back",
       "graticule": "Coordinate grid",
       "distanceMarks": "Distance marks",
       "waypoints": "Waypoints",
       "base": "Terrain base",
+      "features": "Map features on / off",
       "track": "Track details",
       "view": "View settings",
       "legend": "Legend",
@@ -302,7 +322,7 @@
       "close": "Close the dialog"
     },
     "shortcutsOff": "Single-key shortcuts are off. Turn them on in View → Keyboard shortcuts.",
-    "text": "Drop a GPS recording and see it on real relief. Terrain, imagery and the geolocation math come from {library}: elevation from AWS Terrain Tiles, imagery from Sentinel-2 cloudless by EOX. Your files stay in your browser.",
+    "text": "Drop a GPS recording and see it on real relief. Terrain, imagery, map features and the geolocation math come from {library}: elevation from AWS Terrain Tiles, imagery from Sentinel-2 cloudless by EOX, buildings, roads, water and trees from OpenStreetMap through OpenFreeMap. Your files stay in your browser.",
     "offline": "Works offline: the app and the terrain you have viewed are kept on this device.",
     "install": "Install app",
     "sourceCode": "Source code",

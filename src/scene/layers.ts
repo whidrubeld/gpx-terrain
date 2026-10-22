@@ -63,6 +63,12 @@ const featureLook = (style: LookStyle, feature: Feature) => ({
 })
 
 /**
+ * Meters from the camera beyond which the trunks of trees are hidden:
+ * thinner than a pixel there, and under the crowns.
+ */
+export const TRUNK_DISTANCE = 1200
+
+/**
  * The OpenStreetMap features of one map, from OpenFreeMap's vector tiles: no
  * key, and a tile is downloaded once for all four. Trees keep clear of the
  * ground of the others — also while those are hidden.
@@ -88,6 +94,7 @@ export function createFeatureLayers(style: LookStyle): FeatureLayers {
   const trees = new Trees({
     source,
     avoid: [water, roads, buildings],
+    maxDistance: (part) => (part === 'trunks' ? TRUNK_DISTANCE : undefined),
     minZoom: FEATURE_MIN_ZOOM.trees,
     material: featureLook(style, 'trees')
   })
@@ -117,32 +124,36 @@ export function syncFeatures(
   }
 }
 
-/** The map features of the settings on `map`, in the colors of the look. */
-export function useFeatureLayers(map: Map) {
+/**
+ * The map features of the settings on `map`, in the colors of the look —
+ * every map its own (levels of detail have two); none without a map.
+ */
+export function useFeatureLayers(map: Map | null) {
   const look = useSelector(settingsStore, (s) => s.look)
   const theme = useSelector(uiStore, (s) => s.theme)
   const layers = useMemo(
     () =>
+      map &&
       createFeatureLayers(
         LOOK_STYLES[settingsStore.state.look][uiStore.state.theme]
       ),
     // a layer belongs to one map: new ones for every map
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [map]
   )
   const shown = useSelector(settingsStore, shownFeatures, { compare: shallow })
 
   useEffect(
     () => () => {
+      if (!map || !layers) return
       for (const feature of FEATURES) map.removeLayer(layers[feature])
     },
     [map, layers]
   )
   useEffect(() => {
-    styleFeatures(layers, LOOK_STYLES[look][theme])
+    if (layers) styleFeatures(layers, LOOK_STYLES[look][theme])
   }, [layers, look, theme])
   useEffect(() => {
-    syncFeatures(map, layers, shown)
+    if (map && layers) syncFeatures(map, layers, shown)
   }, [map, layers, shown])
 }
 
@@ -155,7 +166,13 @@ const DOT_SPACING = 8
  * page's. The base's geometry has no UVs: the dots follow its position.
  */
 function dottedWalls(palette: Palette) {
-  const material = new MeshBasicMaterial({ color: palette.wall })
+  const material = new MeshBasicMaterial({
+    color: palette.wall,
+    // in front of the skirts of levels of detail, which hang in its planes
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1
+  })
   const ink = { value: new Color(palette.edge) }
   material.onBeforeCompile = (shader) => {
     shader.uniforms.ink = ink

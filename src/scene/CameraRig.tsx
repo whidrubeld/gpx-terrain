@@ -13,6 +13,7 @@ import {
   type FocusTarget,
   type Insets,
   playbackStore,
+  type Surface,
   terrainStore,
   uiStore,
   viewerStore
@@ -47,9 +48,9 @@ const viewDirection = (azimuth: number) =>
   )
 
 /** Terrain height (scene units, before exaggeration) at terrain coordinates. */
-function heightAt(map: Map, x: number, y: number) {
-  const { lat, lon } = map.getLocation({ x, y, z: 0 })
-  return map.getTerrainPositionSync({ lat, lon }, { loadTile: false })?.z
+function heightAt(surface: Surface, x: number, y: number) {
+  const { lat, lon } = surface.getLocation({ x, y, z: 0 })
+  return surface.getTerrainPositionSync({ lat, lon }, { loadTile: false })?.z
 }
 
 /**
@@ -58,7 +59,7 @@ function heightAt(map: Map, x: number, y: number) {
  * route's start, middle and end towards the camera. Ties go to `AZIMUTH`.
  */
 function clearAzimuth(
-  map: Map,
+  surface: Surface,
   targets: Vector3[],
   reach: number,
   exaggeration: number
@@ -75,7 +76,7 @@ function clearAzimuth(
     for (const target of targets) {
       for (let k = 1; k <= 10; k++) {
         const r = (reach * k) / 10
-        const ground = heightAt(map, target.x + dx * r, target.y + dy * r)
+        const ground = heightAt(surface, target.x + dx * r, target.y + dy * r)
         if (ground !== undefined)
           hidden += Math.max(0, ground * exaggeration - (target.z + r * slope))
       }
@@ -163,7 +164,7 @@ function fitDistance(
 function routePose(
   camera: PerspectiveCamera,
   drape: Drape,
-  map: Map | null
+  surface: Surface | null
 ): Pose {
   const { exaggeration } = settingsStore.state
   const box = new Box3()
@@ -189,12 +190,17 @@ function routePose(
   const size = box.getSize(new Vector3())
   const initial = Math.max(size.x, size.y, size.z, 50) * 1.5
   // orbit around the ground, not a point in the air above it
-  const ground = map ? heightAt(map, center.x, center.y) : undefined
+  const ground = surface ? heightAt(surface, center.x, center.y) : undefined
   if (ground !== undefined) center.z = ground * exaggeration
 
   const targets = [samples[0], center, samples[samples.length - 1]]
-  const azimuth = map
-    ? clearAzimuth(map, targets, initial * Math.cos(ELEVATION), exaggeration)
+  const azimuth = surface
+    ? clearAzimuth(
+        surface,
+        targets,
+        initial * Math.cos(ELEVATION),
+        exaggeration
+      )
     : AZIMUTH
   const direction = viewDirection(azimuth)
   const distance = fitDistance(
@@ -405,7 +411,7 @@ export function CameraRig() {
     const track = viewerStore.state.track
     if (!drape || !track || framed.current === track.points) return
     framed.current = track.points
-    flyTo(routePose(camera, drape, terrainStore.state.map), INTRO.camera[1])
+    flyTo(routePose(camera, drape, terrainStore.state.surface), INTRO.camera[1])
     // `flyTo` is a plain function of this render: the drape alone triggers
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drape])
@@ -414,15 +420,15 @@ export function CameraRig() {
     const reset = () => {
       const current = terrainStore.state.drape
       if (current)
-        flyTo(routePose(camera, current, terrainStore.state.map), 1.2)
+        flyTo(routePose(camera, current, terrainStore.state.surface), 1.2)
     }
     const focus = (event: Event) => {
       const target = (event as CustomEvent<FocusTarget>).detail
-      const { map } = terrainStore.state
+      const { map, surface } = terrainStore.state
       const world = sceneRefs.world
       const controls = controlsRef.current
-      if (!target || !map || !world || !controls) return
-      const local = surfacePoint(map, target.lat, target.lon)
+      if (!target || !map || !surface || !world || !controls) return
+      const local = surfacePoint(surface, target.lat, target.lon)
       const point = world.localToWorld(new Vector3(local.x, local.y, local.z))
       const offset = camera.position.clone().sub(controls.target)
       const distance = Math.min(offset.length(), map.options.tileSize * 0.9)

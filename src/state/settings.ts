@@ -59,6 +59,11 @@ export interface Settings {
   segments: number
   /** `MapOptions.nTiles` (rebuilds the map) */
   tiles: number
+  /**
+   * levels of detail: `segments` only where the camera is near, half of
+   * them farther away (rebuilds the map; see scene/lod.ts)
+   */
+  lod: boolean
   /** CSS pixels per rendered pixel: > 1 renders a chunky, pixelated scene */
   pixelSize: number
   panels: Record<PanelId, boolean>
@@ -106,6 +111,7 @@ function defaults(): Settings {
     exaggeration: 1.25,
     segments: 128,
     tiles: 3,
+    lod: true,
     pixelSize: 1,
     panels: {
       track: !compact,

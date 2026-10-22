@@ -191,7 +191,7 @@ const HOVER_RADIUS = 16
 const MAX_PROJECTED = 20_000
 
 /**
- * Hover and click on the scene: `map.pick` for the terrain under the pointer,
+ * Hover and click on the scene: the terrain under the pointer (`pick`),
  * and the track point nearest to the pointer on screen.
  */
 export function PointerProbe() {
@@ -278,9 +278,9 @@ export function PointerProbe() {
     ndc.set((p.x / width) * 2 - 1, -(p.y / height) * 2 + 1)
     raycaster.setFromCamera(ndc, camera)
 
-    const { map, ready, drape } = terrainStore.state
+    const { surface, ready, drape } = terrainStore.state
     const world = sceneRefs.world
-    const hit = map && ready ? map.pick(raycaster) : undefined
+    const hit = surface && ready ? surface.pick(raycaster) : undefined
     sceneRefs.pointer =
       hit && world ? world.worldToLocal(hit.point.clone()) : null
     hoverStore.setState((s) => ({

@@ -216,7 +216,10 @@ export function LegendBody() {
         <dl className='mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-t border-line pt-2 text-2xs uppercase tracking-[0.06em]'>
           <dt className='text-muted'>{t('legend.zoom')}</dt>
           <dd className='text-right tabular-nums'>
-            {t('legend.zoomValue', { zoom: fit.zoom, imagery: fit.zoom + 1 })}
+            {t('legend.zoomValue', {
+              zoom: fit.zoom,
+              imagery: fit.imageryZoom
+            })}
           </dd>
           <dt className='text-muted'>{t('legend.grid')}</dt>
           <dd className='text-right tabular-nums'>

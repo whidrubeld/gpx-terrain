@@ -7,7 +7,8 @@ import {
   drawsFeatures,
   FEATURE_MIN_ZOOM,
   styleFeatures,
-  syncFeatures
+  syncFeatures,
+  TRUNK_DISTANCE
 } from './layers'
 import { LOOK_STYLES, WIRE_FILL } from './look'
 
@@ -61,6 +62,16 @@ describe('map features', () => {
     expect(drawsFeatures({ ...all(false), trees: true }, 13)).toBe(false)
     expect(drawsFeatures({ ...all(false), trees: true }, 14)).toBe(true)
     expect(drawsFeatures(all(false), 14)).toBe(false)
+  })
+
+  it('hide the trunks of trees far from the camera, never the crowns', () => {
+    const { trees } = createFeatureLayers(LOOK_STYLES.model.dark)
+    const distance = trees.maxDistance
+    expect(typeof distance).toBe('function')
+    if (typeof distance === 'function') {
+      expect(distance('trunks')).toBe(TRUNK_DISTANCE)
+      expect(distance('crowns')).toBeUndefined()
+    }
   })
 })
 

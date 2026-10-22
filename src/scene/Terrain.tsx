@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo } from 'react'
-import { MeshNormalMaterial } from 'three'
+import { MeshNormalMaterial, type PerspectiveCamera } from 'three'
 import {
   createTerrainMaterial,
   Map,
@@ -14,6 +14,7 @@ import type { TerrainFit } from '../lib/fit'
 import { settingsStore } from '../state/settings'
 import { terrainStore, uiStore } from '../state/viewer'
 import { useFeatureLayers, useTerrainBase } from './layers'
+import { coarseSegments, TerrainLod } from './lod'
 import { LOOK_STYLES, type LookStyle, monochrome } from './look'
 import { placedTiles } from './tiles'
 
@@ -82,33 +83,54 @@ function heightRange(map: Map) {
   return Number.isFinite(min) ? { min, max } : null
 }
 
+/** Whether a tile shows what it should: its imagery, where the look has it. */
+const complete = (tile: Tile) =>
+  textured.has(tile) || currentStyle().imagery === null
+
+/**
+ * The terrain of the grid: one map — or, with levels of detail, a coarse
+ * one of the whole grid and a detailed one where the camera is near
+ * (lod.ts); `segments` is the detailed mesh.
+ */
 export function Terrain({
   fit: next,
-  segments
+  segments,
+  lod: levels
 }: {
   fit: TerrainFit
   segments: number
+  lod: boolean
 }) {
   // another track in the same area keeps the loaded map
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fit = useMemo(() => next, [next.key])
-  const map = useMemo(() => {
+  const { map, detail, lod } = useMemo(() => {
     const style = currentStyle()
-    const map = new Map({
-      source: { api: 'eox' },
-      location: fit.location,
-      options: {
-        nTiles: fit.nTiles,
-        zoom: fit.zoom,
-        tileSize: fit.tileSize,
-        tileSegments: segments,
-        zScale: fit.zScale
-      },
-      material: { process: processor(style), create: terrainMaterial }
-    })
-    map.addLayer(placeholders)
-    return map
-  }, [fit, segments])
+    const coarse = levels ? coarseSegments(segments) : segments
+    const create = (tileSegments: number) => {
+      const map = new Map({
+        source: { api: 'eox' },
+        location: fit.location,
+        options: {
+          nTiles: fit.nTiles,
+          zoom: fit.zoom,
+          tileSize: fit.tileSize,
+          tileSegments,
+          zScale: fit.zScale,
+          imageryZoomOffset: fit.imageryZoom - fit.zoom,
+          // half a coarse cell: deeper than the two meshes ever part
+          skirt: levels ? (fit.metersPerUnit * fit.tileSize) / coarse / 2 : 0
+        },
+        material: { process: processor(style), create: terrainMaterial }
+      })
+      map.addLayer(placeholders)
+      return map
+    }
+    // the same location, zoom and scale: the two maps line up as they are
+    const map = create(coarse)
+    const detail = levels ? create(segments) : null
+    return { map, detail, lod: new TerrainLod(map, detail, complete) }
+  }, [fit, segments, levels])
   const look = useSelector(settingsStore, (s) => s.look)
   const theme = useSelector(uiStore, (s) => s.theme)
 
@@ -117,12 +139,14 @@ export function Terrain({
     terrainStore.setState((s) => ({
       ...s,
       map,
+      surface: lod,
       fit,
       ready: false,
       readyAt: null,
       loaded: 0,
       textured: 0,
       total: fit.nTiles ** 2,
+      detailed: detail ? 0 : null,
       heights: null,
       drape: null
     }))
@@ -153,33 +177,58 @@ export function Terrain({
       active = false
       clearTimeout(timer)
       map.clean()
+      detail?.clean()
       terrainStore.setState((s) =>
-        s.map === map ? { ...s, map: null, ready: false, drape: null } : s
+        s.map === map
+          ? {
+              ...s,
+              map: null,
+              surface: null,
+              ready: false,
+              detailed: null,
+              drape: null
+            }
+          : s
       )
     }
-  }, [map, fit])
+  }, [map, detail, lod, fit])
 
   // the look: the tiles' materials are made again from the same textures;
   // only a new processor reloads the imagery
   useEffect(() => {
-    map.setMaterial({ process: processor(LOOK_STYLES[look][theme]) })
-  }, [map, look, theme])
+    const process = processor(LOOK_STYLES[look][theme])
+    map.setMaterial({ process })
+    detail?.setMaterial({ process })
+  }, [map, detail, look, theme])
 
   useFeatureLayers(map)
+  useFeatureLayers(detail)
   useTerrainBase(map, fit)
 
-  useFrame(() => {
+  useFrame(({ camera, size }) => {
     const tiles = placedTiles(map)
     const loaded = tiles.length
     const done = tiles.filter((tile) => textured.has(tile)).length
     const state = terrainStore.state
-    if (
-      state.map === map &&
-      (state.loaded !== loaded || state.textured !== done)
-    ) {
+    if (state.map !== map) return
+    if (state.loaded !== loaded || state.textured !== done) {
       terrainStore.setState((s) => ({ ...s, loaded, textured: done }))
     }
+    // the levels for this camera: what lies on the terrain follows a swap
+    if (lod.update(camera as PerspectiveCamera, size.height)) {
+      terrainStore.setState((s) => ({
+        ...s,
+        revision: s.revision + 1,
+        detailed: lod.shown.size
+      }))
+    }
+    lod.apply()
   })
 
-  return <primitive object={map.terrain} />
+  return (
+    <>
+      <primitive object={map.terrain} />
+      {detail && <primitive object={detail.terrain} />}
+    </>
+  )
 }

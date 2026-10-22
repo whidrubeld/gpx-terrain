@@ -1,8 +1,20 @@
-import { PerspectiveCamera } from 'three'
+import { Color, PerspectiveCamera } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import { describe, expect, it } from 'vitest'
 
-import { frameStep, monochrome } from './look'
+import { frameStep, LOOK_STYLES, monochrome } from './look'
+
+describe('the dark model', () => {
+  it('steps from the ground to the roads to the buildings, none glaring', () => {
+    const { terrain, roads, buildings } = LOOK_STYLES.model.dark
+    const lightness = (color: string) =>
+      new Color(color).getHSL({ h: 0, s: 0, l: 0 }).l
+    expect(lightness(roads)).toBeGreaterThan(lightness(terrain) + 0.05)
+    expect(lightness(buildings)).toBeGreaterThan(lightness(roads) + 0.05)
+    // the white route stays the brightest
+    expect(lightness(buildings)).toBeLessThan(0.65)
+  })
+})
 
 describe('frameStep', () => {
   it('passes ordinary frames through', () => {

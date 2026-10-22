@@ -4,9 +4,14 @@ import { type Bounds, EARTH_CIRCUMFERENCE } from './geo'
 
 /** Scene units per tile, as in `defaultMapOptions`. */
 export const TILE_SIZE = 600
-/** AWS terrarium tiles go to 15; textures are fetched one zoom deeper. */
+/** AWS terrarium tiles go to 15; a city fits at 14, with trees. */
 export const MAX_ZOOM = 14
 export const MIN_ZOOM = 3
+/**
+ * The deepest imagery worth loading: Sentinel-2 has 10 m pixels, and EOX's
+ * deeper tiles are the same picture enlarged.
+ */
+export const IMAGERY_MAX_ZOOM = 14
 
 /** How the `Map` grid is laid out so that a route fits on it. */
 export interface TerrainFit {
@@ -16,6 +21,11 @@ export interface TerrainFit {
   tile: { x: number; y: number }
   /** any point inside the center tile; passed to `new Map({ location })` */
   location: { lat: number; lon: number }
+  /**
+   * zoom of the imagery: four tiles per terrain tile, one zoom deeper — a
+   * single one at `IMAGERY_MAX_ZOOM`, where the photo's detail ends
+   */
+  imageryZoom: number
   tileSize: number
   /** meters per scene unit at the grid center */
   metersPerUnit: number
@@ -67,6 +77,7 @@ export function fitTerrain(
     nTiles,
     tile,
     location,
+    imageryZoom: Math.max(zoom, Math.min(zoom + 1, IMAGERY_MAX_ZOOM)),
     tileSize: TILE_SIZE,
     metersPerUnit,
     zScale: 1 / metersPerUnit,

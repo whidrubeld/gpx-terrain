@@ -147,6 +147,7 @@
     "waypoints": "Waypoints",
     "base": "Terrain base",
     "fog": "Fog",
+    "lod": "Levels of detail",
     "autoRotate": "Auto-rotate",
     "follow": "Follow playhead",
     "animations": "Animations",
@@ -156,7 +157,7 @@
     "off": "Off",
     "tiles": "Tiles",
     "mesh": "Mesh",
-    "note": "Tiles and mesh rebuild the map. Everything else changes it in place."
+    "note": "Tiles, mesh and levels of detail rebuild the map. Everything else changes it in place."
   },
   "legend": {
     "travelled": "Route · travelled",
@@ -189,6 +190,7 @@
     "textures": "Textures",
     "programs": "Programs",
     "tiles": "Tiles",
+    "lod": "LOD",
     "resolution": "Resolution",
     "heap": "JS heap"
   },

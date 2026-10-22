@@ -35,6 +35,7 @@ const ADVANCED = [
   { key: 'autoRotate', hotkey: 'S' },
   { key: 'animations', hotkey: 'A' },
   { key: 'fog' },
+  { key: 'lod' },
   { key: 'shortcuts' }
 ] as const
 

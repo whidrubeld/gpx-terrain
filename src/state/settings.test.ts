@@ -76,6 +76,15 @@ describe('settings', () => {
     expect(settings.tiles).toBe(3)
   })
 
+  it('draw levels of detail until they are turned off', async () => {
+    expect((await load({})).lod).toBe(true)
+    const settings = await load({
+      'gpx-terrain/settings@1': '{"lod":false,"segments":192}'
+    })
+    expect(settings.lod).toBe(false)
+    expect(settings.segments).toBe(192)
+  })
+
   it('take over the settings of the three-map-terrain demo', async () => {
     const settings = await load({
       'three-map-terrain/gpx-viewer/settings@1':

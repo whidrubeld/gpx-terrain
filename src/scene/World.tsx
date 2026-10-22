@@ -36,7 +36,9 @@ export function World() {
   const track = useSelector(viewerStore, (s) => s.track)
   const tiles = useSelector(settingsStore, (s) => s.tiles)
   const segments = useSelector(settingsStore, (s) => s.segments)
+  const lod = useSelector(settingsStore, (s) => s.lod)
   const map = useSelector(terrainStore, (s) => s.map)
+  const surface = useSelector(terrainStore, (s) => s.surface)
   const ready = useSelector(terrainStore, (s) => s.ready)
   const revision = useSelector(terrainStore, (s) => s.revision)
 
@@ -54,10 +56,12 @@ export function World() {
     }
   }, [])
 
-  // once the grid is loaded: DEM elevations for tracks without them, then the drape
+  // once the grid is loaded: DEM elevations for tracks without them, then the
+  // drape — again whenever the surface changes (more tiles, another level)
   useEffect(() => {
     // the store may already hold the next map (this render's one is being cleaned)
-    if (!map || !ready || !track || terrainStore.state.map !== map) return
+    if (!map || !surface || !ready || !track) return
+    if (terrainStore.state.map !== map) return
     if (track.elevationSource === 'none') {
       const zScale = map.options.zScale
       viewerStore.setState((s) =>
@@ -65,7 +69,7 @@ export function World() {
           ? {
               ...s,
               track: withTerrainElevation(track, (p) => {
-                const position = map.getTerrainPositionSync(p, {
+                const position = surface.getTerrainPositionSync(p, {
                   loadTile: false
                 })
                 return position ? position.z / zScale : undefined
@@ -75,10 +79,11 @@ export function World() {
       )
       return
     }
-    const cell = map.options.tileSize / map.options.tileSegments
-    const drape = drapeTrack(map, track, cell, LIFT * map.options.zScale)
+    // the finest mesh drawn: the detailed one
+    const cell = map.options.tileSize / segments
+    const drape = drapeTrack(surface, track, cell, LIFT * map.options.zScale)
     terrainStore.setState((s) => (s.map === map ? { ...s, drape } : s))
-  }, [map, ready, revision, track])
+  }, [map, surface, ready, revision, track, segments])
 
   useFrame((_, delta) => {
     const node = group.current
@@ -100,7 +105,12 @@ export function World() {
   return (
     <group ref={group} name='world'>
       {fit && (
-        <Terrain key={`${fit.key}:${segments}`} fit={fit} segments={segments} />
+        <Terrain
+          key={`${fit.key}:${segments}:${lod}`}
+          fit={fit}
+          segments={segments}
+          lod={lod}
+        />
       )}
       <Graticule />
       <Route />

@@ -1,7 +1,7 @@
 import { Utils } from 'three-map-terrain'
 import { describe, expect, it } from 'vitest'
 
-import { fitTerrain, MAX_ZOOM } from './fit'
+import { fitTerrain, IMAGERY_MAX_ZOOM, MAX_ZOOM } from './fit'
 
 describe('fitTerrain', () => {
   const eiger = { south: 46.5754, west: 7.9736, north: 46.6005, east: 8.0122 }
@@ -46,5 +46,16 @@ describe('fitTerrain', () => {
     expect(fitTerrain(point, 3).zoom).toBe(MAX_ZOOM)
     const alps = { south: 45.8, west: 6.8, north: 47.0, east: 10.5 }
     expect(fitTerrain(alps, 3).zoom).toBeLessThan(9)
+  })
+
+  it('loads imagery a zoom deeper, down to where the photo has detail', () => {
+    const alps = { south: 45.8, west: 6.8, north: 47.0, east: 10.5 }
+    const wide = fitTerrain(alps, 3)
+    expect(wide.imageryZoom).toBe(wide.zoom + 1)
+    const point = { south: 46.6, west: 8, north: 46.6001, east: 8.0001 }
+    expect(fitTerrain(point, 3)).toMatchObject({
+      zoom: MAX_ZOOM,
+      imageryZoom: IMAGERY_MAX_ZOOM
+    })
   })
 })

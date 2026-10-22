@@ -102,9 +102,10 @@ export const LOOK_STYLES: Readonly<
     dark: {
       imagery: null,
       wireframe: false,
+      // ground, roads, buildings a step lighter each; the route the brightest
       terrain: '#57544e',
-      buildings: '#dcdcdc',
-      roads: '#a39e95',
+      buildings: '#9b968e',
+      roads: '#76726b',
       water: '#3d6b92',
       trees: '#4d7540'
     },

@@ -29,14 +29,14 @@ const decimalsFor = (step: number) =>
 export function Graticule() {
   const visible = useSelector(settingsStore, (s) => s.graticule)
   const segments = useSelector(settingsStore, (s) => s.segments)
-  const map = useSelector(terrainStore, (s) => s.map)
+  const surface = useSelector(terrainStore, (s) => s.surface)
   const ready = useSelector(terrainStore, (s) => s.ready)
   const revision = useSelector(terrainStore, (s) => s.revision)
   const fit = useSelector(terrainStore, (s) => s.fit)
   const theme = useSelector(uiStore, (s) => s.theme)
 
   const grid = useMemo(() => {
-    if (!map || !ready || !fit) return null
+    if (!surface || !ready || !fit) return null
     const { extent } = fit
     const step = graticuleStep(fit)
     const decimals = decimalsFor(step)
@@ -54,11 +54,11 @@ export function Graticule() {
       from: { lat: number; lon: number },
       to: { lat: number; lon: number }
     ) => {
-      let previous = surfacePoint(map, from.lat, from.lon)
+      let previous = surfacePoint(surface, from.lat, from.lon)
       for (let k = 1; k <= samples; k++) {
         const t = k / samples
         const p = surfacePoint(
-          map,
+          surface,
           from.lat + (to.lat - from.lat) * t,
           from.lon + (to.lon - from.lon) * t
         )
@@ -82,7 +82,7 @@ export function Graticule() {
     for (let i = Math.ceil(west / step); i * step < east; i++) {
       const lon = i * step
       line({ lat: south, lon }, { lat: north, lon })
-      const p = surfacePoint(map, south, lon)
+      const p = surfacePoint(surface, south, lon)
       labels.push({
         key: `lon${i}`,
         text: formatLon(lon, decimals),
@@ -92,7 +92,7 @@ export function Graticule() {
     for (let i = Math.ceil(south / step); i * step < north; i++) {
       const lat = i * step
       line({ lat, lon: west }, { lat, lon: east })
-      const p = surfacePoint(map, lat, west)
+      const p = surfacePoint(surface, lat, west)
       labels.push({
         key: `lat${i}`,
         text: formatLat(lat, decimals),
@@ -108,7 +108,7 @@ export function Graticule() {
     return { geometry, labels }
     // `revision`: more tiles loaded, so the lines follow more of the relief
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, ready, revision, fit, segments])
+  }, [surface, ready, revision, fit, segments])
 
   const material = useMemo(
     () =>

@@ -104,6 +104,10 @@ test('starts with the chooser, opens an example and changes it', async ({
 test('the intro reveals the waypoints, never showing them first', async ({
   page
 }) => {
+  // a slow machine, like a CI runner: the labels mount frames after they
+  // render, some after the last frame of the intro
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 })
   await mockTileServers(page)
   // every waypoint label as it enters the page: hidden until the route passes
   await page.addInitScript(() => {

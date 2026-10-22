@@ -176,7 +176,8 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 - **Rendering on demand** (`frameloop='demand'`, `RenderOnDemand` in
   Environment.tsx): a still scene draws no frames. Store changes, the
   controls' `change`, pointer moves, tiles placed or stitched, imagery
-  arriving and layers drawing a tile ask for one; what moves on its own
+  arriving, layers drawing a tile and labels mounting (drei's `Html`
+  commits them in a React root of its own, frames later) ask for one; what moves on its own
   (intro, playback, flights, easing, the center gliding) asks for the next
   while it lasts. Anything that changes the scene imperatively — a
   material, a visibility, an object — calls `invalidate()` (from

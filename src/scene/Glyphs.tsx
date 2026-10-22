@@ -1,7 +1,14 @@
 import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
-import { type ReactNode, type Ref, useEffect, useMemo, useRef } from 'react'
+import {
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef
+} from 'react'
 import {
   BufferAttribute,
   BufferGeometry,
@@ -70,8 +77,11 @@ export function Glyphs({
  * A DOM label anchored above a scene point. `visible` is polled every frame,
  * so labels can follow the intro without re-rendering — and read once when
  * it mounts: a label the intro has yet to reveal never shows (and fades out)
- * before the first frame. Labels let the pointer through to the canvas,
- * except the buttons of `interactive` ones.
+ * before the first frame. `<Html>` commits the label in a React root of its
+ * own, on a slow machine frames later — after the intro, which then asks for
+ * no more: so the label asks for a frame when it mounts, and that frame
+ * reads `visible`. Labels let the pointer through to the canvas, except the
+ * buttons of `interactive` ones.
  */
 export function Label({
   position,
@@ -87,7 +97,15 @@ export function Label({
   placement?: 'above' | 'below'
   children: ReactNode
 }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
+  const invalidate = useThree((s) => s.invalidate)
+  const mount = useCallback(
+    (element: HTMLDivElement | null) => {
+      ref.current = element
+      if (element) invalidate()
+    },
+    [invalidate]
+  )
   useFrame(() => {
     const element = ref.current
     if (!element || !visible) return
@@ -98,7 +116,7 @@ export function Label({
   return (
     <Html position={position} zIndexRange={[40, 0]} wrapperClass='scene-anchor'>
       <div
-        ref={ref}
+        ref={mount}
         className='scene-label'
         data-visible={String(visible?.() ?? true)}
         data-interactive={interactive}

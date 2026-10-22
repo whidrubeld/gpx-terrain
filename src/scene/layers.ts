@@ -1,3 +1,4 @@
+import { invalidate } from '@react-three/fiber'
 import { shallow, useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo } from 'react'
 import { Color, MeshBasicMaterial } from 'three'
@@ -24,7 +25,7 @@ import {
   type LookStyle,
   PALETTE,
   type Palette,
-  WIRE_FILL
+  wireFill
 } from './look'
 
 /**
@@ -59,7 +60,7 @@ export interface FeatureLayers {
 const featureLook = (style: LookStyle, feature: Feature) => ({
   color: style[feature],
   wireframe: style.wireframe,
-  fillOpacity: style.wireframe ? WIRE_FILL : 0
+  fillOpacity: style.wireframe ? wireFill(feature) : 0
 })
 
 /**
@@ -68,16 +69,29 @@ const featureLook = (style: LookStyle, feature: Feature) => ({
  */
 export const TRUNK_DISTANCE = 1200
 
+/** …and the outlines of buildings: a haze of lines farther away. */
+export const EDGE_DISTANCE = 3000
+
+/**
+ * Meters between the trees of a wood: the library's default — and sparser
+ * on the coarse level of detail, which the camera only sees from afar.
+ */
+export const TREE_SPACING = { detail: 9, coarse: 14 } as const
+
 /**
  * The OpenStreetMap features of one map, from OpenFreeMap's vector tiles: no
  * key, and a tile is downloaded once for all four. Trees keep clear of the
  * ground of the others — also while those are hidden.
  */
-export function createFeatureLayers(style: LookStyle): FeatureLayers {
+export function createFeatureLayers(
+  style: LookStyle,
+  coarse = false
+): FeatureLayers {
   const source = { api: 'openfreemap' } as const
   const buildings = new Buildings({
     source,
     edges: true,
+    maxDistance: (part) => (part === 'edges' ? EDGE_DISTANCE : undefined),
     minZoom: FEATURE_MIN_ZOOM.buildings,
     material: featureLook(style, 'buildings')
   })
@@ -93,6 +107,7 @@ export function createFeatureLayers(style: LookStyle): FeatureLayers {
   })
   const trees = new Trees({
     source,
+    spacing: coarse ? TREE_SPACING.coarse : TREE_SPACING.detail,
     avoid: [water, roads, buildings],
     maxDistance: (part) => (part === 'trunks' ? TRUNK_DISTANCE : undefined),
     minZoom: FEATURE_MIN_ZOOM.trees,
@@ -105,6 +120,7 @@ export function createFeatureLayers(style: LookStyle): FeatureLayers {
 export function styleFeatures(layers: FeatureLayers, style: LookStyle) {
   for (const feature of FEATURES)
     layers[feature].setMaterial(featureLook(style, feature))
+  invalidate()
 }
 
 /**
@@ -122,33 +138,41 @@ export function syncFeatures(
     if (shown[feature] && !map.layers.includes(layer)) map.addLayer(layer)
     layer.group.visible = shown[feature]
   }
+  invalidate()
 }
 
 /**
  * The map features of the settings on `map`, in the colors of the look —
- * every map its own (levels of detail have two); none without a map.
+ * every map its own (levels of detail have two; `coarse`: the map of the
+ * far level); none without a map. A tile they draw asks for a frame.
  */
-export function useFeatureLayers(map: Map | null) {
+export function useFeatureLayers(map: Map | null, coarse = false) {
   const look = useSelector(settingsStore, (s) => s.look)
   const theme = useSelector(uiStore, (s) => s.theme)
   const layers = useMemo(
     () =>
       map &&
       createFeatureLayers(
-        LOOK_STYLES[settingsStore.state.look][uiStore.state.theme]
+        LOOK_STYLES[settingsStore.state.look][uiStore.state.theme],
+        coarse
       ),
     // a layer belongs to one map: new ones for every map
-    [map]
+    [map, coarse]
   )
   const shown = useSelector(settingsStore, shownFeatures, { compare: shallow })
 
-  useEffect(
-    () => () => {
-      if (!map || !layers) return
+  useEffect(() => {
+    if (!map || !layers) return
+    const stops = FEATURES.map((feature) =>
+      layers[feature].onTileDrawn(() => {
+        invalidate()
+      })
+    )
+    return () => {
+      for (const stop of stops) stop()
       for (const feature of FEATURES) map.removeLayer(layers[feature])
-    },
-    [map, layers]
-  )
+    }
+  }, [map, layers])
   useEffect(() => {
     if (layers) styleFeatures(layers, LOOK_STYLES[look][theme])
   }, [layers, look, theme])
@@ -241,5 +265,6 @@ export function useTerrainBase(map: Map, fit: TerrainFit) {
   useEffect(() => {
     base.walls.group.visible = shown
     base.outline.group.visible = shown
+    invalidate()
   }, [base, shown])
 }

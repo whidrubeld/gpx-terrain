@@ -6,6 +6,7 @@ import { MapControls } from 'three/addons/controls/MapControls.js'
 import type { Map } from 'three-map-terrain'
 
 import { indexAtProgress } from '../gpx/track'
+import { gridSize } from '../lib/fit'
 import { settingsStore } from '../state/settings'
 import {
   commands,
@@ -283,6 +284,7 @@ export function CameraRig() {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const gl = useThree((s) => s.gl)
   const set = useThree((s) => s.set)
+  const invalidate = useThree((s) => s.invalidate)
   const size = useThree((s) => s.size)
   const controlsRef = useRef<MapControls | null>(null)
   const flight = useRef<Flight | null>(null)
@@ -312,19 +314,26 @@ export function CameraRig() {
     const cancel = () => {
       flight.current = null
     }
+    // the scene renders on demand: every move of the camera asks for a frame
+    // (damping and auto-rotate keep asking while they move it)
+    const change = () => {
+      invalidate()
+    }
     controls.addEventListener('start', cancel)
+    controls.addEventListener('change', change)
     controlsRef.current = controls
     sceneRefs.controls = controls
     set({ controls })
     return () => {
       controls.removeEventListener('start', cancel)
+      controls.removeEventListener('change', change)
       controls.stopListenToKeyEvents()
       controls.dispose()
       controlsRef.current = null
       sceneRefs.controls = null
       set({ controls: null })
     }
-  }, [camera, gl, set])
+  }, [camera, gl, set, invalidate])
 
   // the map features draw the tiles around what the camera looks at first
   const map = useSelector(terrainStore, (s) => s.map)
@@ -341,6 +350,7 @@ export function CameraRig() {
     width: number
     height: number
   } | null>(null)
+  /** Returns whether the center still glides. */
   const updateCenter = (delta: number) => {
     const { insets } = uiStore.state
     const { width, height } = size
@@ -365,10 +375,11 @@ export function CameraRig() {
       current.y === next.y &&
       current.width === width &&
       current.height === height
-    if (unchanged) return
+    if (unchanged) return false
     center.current = next
     camera.setViewOffset(width, height, -next.x, -next.y, width, height)
     camera.updateProjectionMatrix()
+    return next.x !== x || next.y !== y
   }
 
   const flyTo = (to: Pose, seconds: number) => {
@@ -396,7 +407,7 @@ export function CameraRig() {
   useEffect(() => {
     const controls = controlsRef.current
     if (!fit || !controls) return
-    const extent = fit.tileSize * fit.nTiles
+    const extent = gridSize(fit)
     camera.near = Math.max(0.5, extent / 4000)
     camera.far = extent * 30
     camera.updateProjectionMatrix()
@@ -450,9 +461,10 @@ export function CameraRig() {
 
   const followed = useMemo(() => new Vector3(), [])
   useFrame((_, delta) => {
-    updateCenter(delta)
+    const gliding = updateCenter(delta)
     const controls = controlsRef.current
     if (!controls) return
+    if (gliding || flight.current) invalidate()
     const settings = settingsStore.state
     const current = flight.current
     if (current) {

@@ -1,4 +1,4 @@
-import { useFrame } from '@react-three/fiber'
+import { invalidate, useFrame } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo } from 'react'
 import { MeshNormalMaterial, type PerspectiveCamera } from 'three'
@@ -39,6 +39,8 @@ const textured = new WeakSet<Tile>()
  */
 function terrainMaterial({ texture, tile, options }: TerrainMaterialInput) {
   if (texture) textured.add(tile)
+  // the scene renders on demand: the new material is drawn in a frame
+  invalidate()
   const style = currentStyle()
   const { wireframe } = style
   if (texture && style.imagery) {
@@ -53,15 +55,22 @@ function terrainMaterial({ texture, tile, options }: TerrainMaterialInput) {
   })
 }
 
-/** The bare relief instead of the library's rainbow placeholder while imagery loads. */
+/**
+ * The bare relief instead of the library's rainbow placeholder while imagery
+ * loads — and a frame for every tile placed or stitched.
+ */
 const placeholders: MapLayer = {
   tileLoaded(tile) {
+    invalidate()
     if (!(tile.mesh.material instanceof MeshNormalMaterial)) return
     tile.mesh.material = terrainMaterial({
       texture: null,
       tile,
       options: tile.map.materialOptions
     })
+  },
+  tileChanged() {
+    invalidate()
   }
 }
 
@@ -112,7 +121,8 @@ export function Terrain({
         source: { api: 'eox' },
         location: fit.location,
         options: {
-          nTiles: fit.nTiles,
+          // the rectangle of tiles around the route; buildings are cut at it
+          grid: fit.grid,
           zoom: fit.zoom,
           tileSize: fit.tileSize,
           tileSegments,
@@ -145,7 +155,7 @@ export function Terrain({
       readyAt: null,
       loaded: 0,
       textured: 0,
-      total: fit.nTiles ** 2,
+      total: fit.columns * fit.rows,
       detailed: detail ? 0 : null,
       heights: null,
       drape: null
@@ -199,9 +209,10 @@ export function Terrain({
     const process = processor(LOOK_STYLES[look][theme])
     map.setMaterial({ process })
     detail?.setMaterial({ process })
+    invalidate()
   }, [map, detail, look, theme])
 
-  useFeatureLayers(map)
+  useFeatureLayers(map, detail !== null)
   useFeatureLayers(detail)
   useTerrainBase(map, fit)
 

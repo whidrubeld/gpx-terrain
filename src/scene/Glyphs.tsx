@@ -68,8 +68,10 @@ export function Glyphs({
 
 /**
  * A DOM label anchored above a scene point. `visible` is polled every frame,
- * so labels can follow the intro without re-rendering. Labels let the pointer
- * through to the canvas, except the buttons of `interactive` ones.
+ * so labels can follow the intro without re-rendering — and read once when
+ * it mounts: a label the intro has yet to reveal never shows (and fades out)
+ * before the first frame. Labels let the pointer through to the canvas,
+ * except the buttons of `interactive` ones.
  */
 export function Label({
   position,
@@ -98,7 +100,7 @@ export function Label({
       <div
         ref={ref}
         className='scene-label'
-        data-visible='true'
+        data-visible={String(visible?.() ?? true)}
         data-interactive={interactive}
         data-placement={placement}
       >

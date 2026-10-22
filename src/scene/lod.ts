@@ -15,6 +15,12 @@ export const DETAIL_CELL_PX = 16
 /** …and below which it is coarse again: a margin, so that no tile flips back and forth. */
 export const COARSE_CELL_PX = 12
 
+/**
+ * Milliseconds a complete detailed tile is kept, hidden, after the camera
+ * left it: coming back shows it at once, without loading it again.
+ */
+export const KEEP_MS = 30_000
+
 /** The coarse mesh: half the segments of the detailed one. */
 export const coarseSegments = (segments: number) =>
   Math.max(16, Math.round(segments / 2))
@@ -70,6 +76,8 @@ export class TerrainLod implements Surface {
   readonly shown = new Set<string>()
   /** Tiles the camera is near: loaded in detail, shown once complete. */
   private readonly wanted = new Set<string>()
+  /** Complete detailed tiles the camera left, and since when (ms). */
+  private readonly left = new globalThis.Map<string, number>()
   private readonly keys = new WeakMap<Object3D, string | null>()
 
   constructor(
@@ -84,8 +92,12 @@ export class TerrainLod implements Surface {
    * — and swaps those that are ready. Returns whether the drawn surface
    * changed: what lies on it follows.
    */
-  update(camera: PerspectiveCamera, height: number): boolean {
-    const { coarse, detail, wanted, shown } = this
+  update(
+    camera: PerspectiveCamera,
+    height: number,
+    now = performance.now()
+  ): boolean {
+    const { coarse, detail, wanted, shown, left } = this
     if (!detail) return false
     detail.focus = coarse.focus
     const focal =
@@ -110,14 +122,22 @@ export class TerrainLod implements Surface {
     let changed = false
     for (const tile of Object.values(detail.tileCache)) {
       const key = tile.key()
-      if (!wanted.has(key)) {
-        // the coarse tile is there all along
-        if (shown.delete(key)) changed = true
-        detail.removeTileSegment(tile.x, tile.y)
-      } else if (!shown.has(key) && this.complete(tile)) {
-        shown.add(key)
-        changed = true
+      if (wanted.has(key)) {
+        left.delete(key)
+        if (!shown.has(key) && this.complete(tile)) {
+          shown.add(key)
+          changed = true
+        }
+        continue
       }
+      // back to the coarse tile, there all along; a complete detailed one
+      // waits a while, one still loading stops at once
+      if (shown.delete(key)) changed = true
+      const since = left.get(key) ?? now
+      if (!this.complete(tile) || now - since > KEEP_MS) {
+        left.delete(key)
+        detail.removeTileSegment(tile.x, tile.y)
+      } else left.set(key, since)
     }
     return changed
   }

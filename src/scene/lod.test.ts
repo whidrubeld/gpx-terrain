@@ -14,6 +14,7 @@ import {
   COARSE_CELL_PX,
   coarseSegments,
   DETAIL_CELL_PX,
+  KEEP_MS,
   TerrainLod,
   tileKeyOf,
   wantsDetail
@@ -145,13 +146,26 @@ describe('levels of detail', () => {
     expect(lod.getTerrainPositionSync(middleOf(0))?.z).toBe(128)
     expect(lod.getTerrainPositionSync(middleOf(2))?.z).toBe(64)
 
-    // far away: back to the coarse tile, the detailed one dropped
-    expect(lod.update(cameraAbove(0, 50_000), 800)).toBe(true)
+    // far away: back to the coarse tile; the complete detailed one is kept a
+    // while, hidden, the one still loading is dropped at once
+    const away = cameraAbove(0, 50_000)
+    expect(lod.update(away, 800, 0)).toBe(true)
     lod.apply()
     expect(lod.shown.size).toBe(0)
-    expect(detail.map.removeTileSegment).toHaveBeenCalledWith(0, 0)
+    expect(detail.map.removeTileSegment.mock.calls).toEqual([[1, 0]])
+    expect(detail.map.tileCache[near].mesh.visible).toBe(false)
     expect(coarse.map.tileCache[near].mesh.visible).toBe(true)
     expect(coarseFeature.layers.mask).toBe(1)
+
+    // back within the while: shown at once
+    expect(lod.update(cameraAbove(0, 100), 800, 1000)).toBe(true)
+    expect([...lod.shown]).toEqual([near])
+
+    // gone for longer: dropped
+    lod.update(away, 800, 2000)
+    lod.update(away, 800, 2000 + KEEP_MS + 1)
+    expect(detail.map.removeTileSegment).toHaveBeenCalledWith(0, 0)
+    expect(near in detail.map.tileCache).toBe(false)
   })
 
   it('pick the nearer of the two maps', () => {

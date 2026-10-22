@@ -5,9 +5,11 @@ import { type Feature, FEATURES } from '../state/settings'
 import {
   createFeatureLayers,
   drawsFeatures,
+  EDGE_DISTANCE,
   FEATURE_MIN_ZOOM,
   styleFeatures,
   syncFeatures,
+  TREE_SPACING,
   TRUNK_DISTANCE
 } from './layers'
 import { LOOK_STYLES, WIRE_FILL } from './look'
@@ -64,6 +66,19 @@ describe('map features', () => {
     expect(drawsFeatures(all(false), 14)).toBe(false)
   })
 
+  it('thin out the far level: sparser woods, outlines of buildings near only', () => {
+    const near = createFeatureLayers(LOOK_STYLES.model.dark)
+    const far = createFeatureLayers(LOOK_STYLES.model.dark, true)
+    expect(near.trees.options.spacing).toBe(TREE_SPACING.detail)
+    expect(far.trees.options.spacing).toBe(TREE_SPACING.coarse)
+    const distance = near.buildings.maxDistance
+    expect(typeof distance).toBe('function')
+    if (typeof distance === 'function') {
+      expect(distance('edges')).toBe(EDGE_DISTANCE)
+      expect(distance('walls')).toBeUndefined()
+    }
+  })
+
   it('hide the trunks of trees far from the camera, never the crowns', () => {
     const { trees } = createFeatureLayers(LOOK_STYLES.model.dark)
     const distance = trees.maxDistance
@@ -89,6 +104,8 @@ describe('the looks of the map features', () => {
       fillOpacity: WIRE_FILL,
       color: LOOK_STYLES.wireframe.light.water
     })
+    // woods are their outlines: no fill under them
+    expect(look('trees')).toMatchObject({ wireframe: true, fillOpacity: 0 })
     // the base keeps its walls
     expect(map.materialOptions.wireframe).toBe(false)
 

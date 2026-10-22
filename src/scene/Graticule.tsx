@@ -40,7 +40,7 @@ export function Graticule() {
     const { extent } = fit
     const step = graticuleStep(fit)
     const decimals = decimalsFor(step)
-    const samples = fit.nTiles * Math.min(segments, 96)
+    const samples = Math.max(fit.columns, fit.rows) * Math.min(segments, 96)
     const lift = (fit.tileSize / segments) * 0.2
     // stay inside the grid: points exactly on its edge belong to unloaded tiles
     const inset = (extent.north - extent.south) * 1e-5

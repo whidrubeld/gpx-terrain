@@ -3,16 +3,24 @@ import { useSelector } from '@tanstack/react-store'
 
 import { t } from '../i18n'
 import { settingsStore } from '../state/settings'
-import { viewerStore } from '../state/viewer'
 import { CameraRig } from './CameraRig'
-import { Environment, PerfProbe, PlaybackDriver } from './Environment'
+import {
+  Environment,
+  PerfProbe,
+  PlaybackDriver,
+  RenderOnDemand
+} from './Environment'
 import { PointerProbe } from './Probes'
 import { World } from './World'
 
+/**
+ * Multisampling only where pixels are large: on a 2× screen edges are smooth
+ * already, and the samples of a buffer that size cost the most.
+ */
+const ANTIALIAS = window.devicePixelRatio < 2
+
 export function Scene() {
   const pixelSize = useSelector(settingsStore, (s) => s.pixelSize)
-  // nothing to draw on the start screen: render on demand only
-  const idle = useSelector(viewerStore, (s) => s.track === null)
   // pixel mode renders fewer pixels and lets CSS scale them up without smoothing
   const dpr =
     pixelSize > 1 ? 1 / pixelSize : Math.min(window.devicePixelRatio, 2)
@@ -22,9 +30,14 @@ export function Scene() {
       className='scene'
       data-pixelated={pixelSize > 1}
       dpr={dpr}
-      frameloop={idle ? 'demand' : 'always'}
+      // frames only when something changes: see RenderOnDemand
+      frameloop='demand'
       flat
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      gl={{
+        antialias: ANTIALIAS,
+        alpha: true,
+        powerPreference: 'high-performance'
+      }}
       camera={{
         fov: 45,
         near: 1,
@@ -39,6 +52,7 @@ export function Scene() {
         gl.domElement.setAttribute('aria-label', t('app.scene'))
       }}
     >
+      <RenderOnDemand />
       <Environment />
       <CameraRig />
       <World />

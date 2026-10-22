@@ -64,7 +64,7 @@ export function StatusBar() {
         <span className='hidden flex-none gap-3 md:flex'>
           <span>Z{terrain.fit.zoom}</span>
           <span>
-            {terrain.fit.nTiles}×{terrain.fit.nTiles}
+            {terrain.fit.columns}×{terrain.fit.rows}
           </span>
           <span>
             Dem {terrain.loaded}/{terrain.total}

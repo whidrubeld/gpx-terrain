@@ -1,18 +1,34 @@
-import { Color, PerspectiveCamera } from 'three'
+import { Color, PerspectiveCamera, SRGBColorSpace } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import { describe, expect, it } from 'vitest'
 
+import { FEATURES } from '../state/settings'
 import { frameStep, LOOK_STYLES, monochrome } from './look'
 
 describe('the dark model', () => {
   it('steps from the ground to the roads to the buildings, none glaring', () => {
     const { terrain, roads, buildings } = LOOK_STYLES.model.dark
     const lightness = (color: string) =>
-      new Color(color).getHSL({ h: 0, s: 0, l: 0 }).l
+      new Color(color).getHSL({ h: 0, s: 0, l: 0 }, SRGBColorSpace).l
     expect(lightness(roads)).toBeGreaterThan(lightness(terrain) + 0.05)
     expect(lightness(buildings)).toBeGreaterThan(lightness(roads) + 0.05)
     // the white route stays the brightest
     expect(lightness(buildings)).toBeLessThan(0.65)
+  })
+})
+
+describe('lines', () => {
+  it('give every feature a muted color: none outshines the route', () => {
+    for (const style of Object.values(LOOK_STYLES.wireframe)) {
+      for (const feature of FEATURES) {
+        const { r, g, b } = new Color(style[feature]).getRGB(
+          { r: 0, g: 0, b: 0 },
+          SRGBColorSpace
+        )
+        // chroma: how far from a gray
+        expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThan(0.3)
+      }
+    }
   })
 })
 

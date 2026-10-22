@@ -103,7 +103,8 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 - **`map.terrain` is not a list of tiles**: it also holds the layers' groups.
   Use `placedTiles(map)` (scene/tiles.ts).
 - **Levels of detail** (scene/lod.ts, `settings.lod`): two maps of the same
-  zoom and frame. The coarse one (half the segments) holds the whole grid:
+  zoom and frame. The coarse one (half the segments, sparser woods) holds
+  the whole grid:
   it is `terrainStore.map` — base, camera bounds, tile counts. The detailed
   one (`settings.segments`) loads the tiles where a coarse cell would span
   more than `DETAIL_CELL_PX` on screen, and a tile swaps only once it is
@@ -111,6 +112,7 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   The other level is hidden, never removed: tiles by `visible` and their
   layers, features by `object.layers` only — layers own `visible` for
   `maxDistance`, and their objects are named `'<layer> <part> <z/x/y>'`.
+  A complete detailed tile the camera left stays, hidden, for `KEEP_MS`.
   Skirts close the steps; the dotted walls have a polygon offset to stay in
   front of them. Anything that lies on the terrain or picks it uses
   `terrainStore.surface` (a `Surface`: the detailed map where it is shown),
@@ -159,18 +161,36 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   and `wireframe` of before looks become a look. The inline
   script in `index.html` applies theme and language before the first paint —
   keep it in sync with `settings.ts` and `i18n/locales.ts`.
-- **Scene**: `fitTerrain` picks the deepest zoom whose grid holds the track
-  (at most 14: a city fits there, with trees) and the imagery's
-  (`imageryZoomOffset`: a zoom deeper, but not past 14 — EOX's deeper tiles
-  are the same Sentinel-2 picture enlarged); the route is draped with
-  `getTerrainPositionSync`; exaggeration is `scale.z` of the world group;
-  trunks of trees hide beyond `TRUNK_DISTANCE` (`maxDistance`); the canvas
-  renders on demand while there is no track.
+- **Scene**: `fitTerrain` picks the deepest zoom at which the track, with a
+  margin, fits in `settings.tiles` tiles each way (at most zoom 14: a city
+  fits there, with trees), and lays the grid out as the rectangle of tiles
+  around it — the route in its middle, never narrower than half its length
+  nor than two tiles: the map's `grid` option (`init()` loads it,
+  buildings are cut at it, `bounds` follow); `location` only sets the
+  frame, in the grid's middle tile.
+  The imagery is a zoom deeper, but not past 14 (`imageryZoomOffset`:
+  EOX's deeper tiles are the same Sentinel-2 picture enlarged); the route
+  is draped with `getTerrainPositionSync`; exaggeration is `scale.z` of the
+  world group; trunks of trees hide beyond `TRUNK_DISTANCE`, outlines of
+  buildings beyond `EDGE_DISTANCE` (`maxDistance`).
+- **Rendering on demand** (`frameloop='demand'`, `RenderOnDemand` in
+  Environment.tsx): a still scene draws no frames. Store changes, the
+  controls' `change`, pointer moves, tiles placed or stitched, imagery
+  arriving and layers drawing a tile ask for one; what moves on its own
+  (intro, playback, flights, easing, the center gliding) asks for the next
+  while it lasts. Anything that changes the scene imperatively — a
+  material, a visibility, an object — calls `invalidate()` (from
+  `@react-three/fiber`), or it shows only on the next frame something else
+  asks for. Never let a frame set state that asks for another unless
+  something changed: compare first (the pointer probe compares the camera
+  with a tolerance — the controls recompute it every frame).
 
 ## Visual conventions
 
 - Black and white, square, no radii, no shadows; tokens in `src/index.css`
   (`--fg`, `--muted`, `--line`…), both themes. Pixel icons in `ui/Icon.tsx`.
+  Panels over the scene are nearly opaque and have no `backdrop-filter`:
+  Safari composites a blur again on every frame of the canvas under it.
   Color only where the scene has it: the looks' features, and their swatches
   in the legend.
 - **Vertical alignment is measured, not eyeballed.** Browsers round text
@@ -202,9 +222,10 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^3.3`: layers drawn between frames,
+- `three-map-terrain` comes from npm (`^3.4`: layers drawn between frames,
   looks changed in place, `fillOpacity`, `imageryZoomOffset`, layers'
-  `maxDistance`, `removeTileSegment` and `skirt` for levels of detail; after
+  `maxDistance`, `removeTileSegment` and `skirt` for levels of detail, a
+  rectangular `grid`; after
   a bump, restart `yarn dev`: Vite keeps the old bundle of the package); its
   version is shown in About
   (`__LIBRARY_VERSION__`, read from its package.json at build time).

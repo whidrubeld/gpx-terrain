@@ -12,7 +12,7 @@ import { FEATURES, settingsStore, shownFeatures } from '../state/settings'
 import { terrainStore, uiStore, viewerStore } from '../state/viewer'
 import { graticuleStep } from '../scene/Graticule'
 import { FEATURE_MIN_ZOOM } from '../scene/layers'
-import { GLYPHS, type GlyphName, LOOK_STYLES, WIRE_FILL } from '../scene/look'
+import { GLYPHS, type GlyphName, LOOK_STYLES, wireFill } from '../scene/look'
 import { markStep } from '../scene/Markers'
 import { Panel } from './controls'
 
@@ -72,11 +72,14 @@ function Line({
 function Swatch({
   color,
   line,
-  outline
+  outline,
+  fill
 }: {
   color: string
   line: boolean
   outline: boolean
+  /** in lines, how opaque the fill under the outline is */
+  fill: number
 }) {
   return (
     <svg width={28} height={8} aria-hidden>
@@ -97,7 +100,7 @@ function Swatch({
           width={15}
           height={7}
           fill={color}
-          fillOpacity={outline ? WIRE_FILL : 1}
+          fillOpacity={outline ? fill : 1}
           stroke={outline ? color : 'currentColor'}
           strokeOpacity={outline ? 1 : 0.4}
           shapeRendering='crispEdges'
@@ -205,6 +208,7 @@ export function LegendBody() {
                 color={style[feature]}
                 line={feature === 'roads'}
                 outline={style.wireframe}
+                fill={wireFill(feature)}
               />
             }
             label={t(`view.${feature}`)}
@@ -223,7 +227,7 @@ export function LegendBody() {
           </dd>
           <dt className='text-muted'>{t('legend.grid')}</dt>
           <dd className='text-right tabular-nums'>
-            {fit.nTiles}×{fit.nTiles} ·{' '}
+            {fit.columns}×{fit.rows} ·{' '}
             {t('legend.perTile', {
               size: joinParts(distanceParts(fit.metersPerUnit * fit.tileSize))
             })}

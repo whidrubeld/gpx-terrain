@@ -50,7 +50,11 @@ test('starts with the chooser, opens an example and changes it', async ({
   })
   await expect(title).toBeVisible()
   await expect(page).toHaveTitle('Ouchy – Sauvabelin · GPX Terrain')
-  await expect(page.getByRole('contentinfo')).toContainText('Img 9/9', {
+  // the grid around the route: two columns by three rows of tiles
+  await expect(page.getByRole('contentinfo')).toContainText('2×3', {
+    timeout: 60_000
+  })
+  await expect(page.getByRole('contentinfo')).toContainText('Img 6/6', {
     timeout: 60_000
   })
 
@@ -95,6 +99,38 @@ test('starts with the chooser, opens an example and changes it', async ({
   await expect(
     page.getByRole('button', { name: 'Change track: Bright Angel Trail' })
   ).toBeVisible()
+})
+
+test('the intro reveals the waypoints, never showing them first', async ({
+  page
+}) => {
+  await mockTileServers(page)
+  // every waypoint label as it enters the page: hidden until the route passes
+  await page.addInitScript(() => {
+    const early: string[] = []
+    Object.assign(window, { early })
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue
+          const labels = [node, ...node.querySelectorAll('*')].filter(
+            (element) =>
+              element.matches('.scene-label[data-interactive="true"]')
+          ) as HTMLElement[]
+          for (const label of labels)
+            if (label.dataset.visible === 'true') early.push(label.textContent)
+        }
+      }
+    }).observe(document, { childList: true, subtree: true })
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: /Ouchy – Sauvabelin/ }).click()
+  await expect(
+    page.locator('.scene-label[data-interactive="true"][data-visible="true"]')
+  ).toHaveCount(6, { timeout: 60_000 })
+  expect(
+    await page.evaluate(() => (window as unknown as { early: string[] }).early)
+  ).toEqual([])
 })
 
 test('opens a file, and keeps the track when the next one is broken', async ({

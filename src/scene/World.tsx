@@ -85,7 +85,7 @@ export function World() {
     terrainStore.setState((s) => (s.map === map ? { ...s, drape } : s))
   }, [map, surface, ready, revision, track, segments])
 
-  useFrame((_, delta) => {
+  useFrame(({ invalidate }, delta) => {
     const node = group.current
     if (!node) return
     const { exaggeration, animations } = settingsStore.state
@@ -100,6 +100,8 @@ export function World() {
     const k = animations ? 1 - Math.exp(-delta * 12) : 1
     node.scale.z += (target - node.scale.z) * k
     if (Math.abs(target - node.scale.z) < 1e-4) node.scale.z = target
+    // easing on: the next frame
+    else invalidate()
   })
 
   return (

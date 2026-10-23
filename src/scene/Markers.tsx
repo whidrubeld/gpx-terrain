@@ -50,7 +50,7 @@ function endpoint(track: Track, type: 'start' | 'finish') {
 export function Markers() {
   const t = useT()
   const drape = useSelector(terrainStore, (s) => s.drape)
-  const map = useSelector(terrainStore, (s) => s.map)
+  const surface = useSelector(terrainStore, (s) => s.surface)
   const fit = useSelector(terrainStore, (s) => s.fit)
   const track = useSelector(viewerStore, (s) => s.track)
   const showWaypoints = useSelector(settingsStore, (s) => s.waypoints)
@@ -58,7 +58,7 @@ export function Markers() {
   const theme = useSelector(uiStore, (s) => s.theme)
 
   const layout = useMemo(() => {
-    if (!drape || !track || !map || !fit) return null
+    if (!drape || !track || !surface || !fit) return null
     const stem = fit.tileSize * 0.06
     const last = track.points.length - 1
     const start = lineAt(drape, 0)
@@ -71,7 +71,7 @@ export function Markers() {
       .sort((a, b) => a.distance - b.distance)
       .map((waypoint) => {
         const p = surfacePoint(
-          map,
+          surface,
           waypoint.lat,
           waypoint.lon,
           waypoint.ele ?? 0
@@ -105,7 +105,7 @@ export function Markers() {
       ),
       markPositions: Float32Array.from(marks.flatMap((m) => [m.x, m.y, m.z]))
     }
-  }, [drape, track, map, fit])
+  }, [drape, track, surface, fit])
 
   // vertical stems from the ground to the labels: start, waypoints, finish
   const stems = useMemo(() => {

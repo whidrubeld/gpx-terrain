@@ -1,14 +1,17 @@
-import type { Map } from 'three-map-terrain'
-
 import type { Track } from '../gpx/track'
 import { fractionalIndex } from '../lib/geo'
-import type { Drape } from '../state/viewer'
+import type { Drape, Surface } from '../state/viewer'
 
 /** The point on the rendered surface, or at the GPX altitude off the loaded grid. */
-export function surfacePoint(map: Map, lat: number, lon: number, alt = 0) {
+export function surfacePoint(
+  surface: Surface,
+  lat: number,
+  lon: number,
+  alt = 0
+) {
   return (
-    map.getTerrainPositionSync({ lat, lon }, { loadTile: false }) ??
-    map.getPosition({ lat, lon, alt }, { loadTile: false })
+    surface.getTerrainPositionSync({ lat, lon }, { loadTile: false }) ??
+    surface.getPosition({ lat, lon, alt }, { loadTile: false })
   )
 }
 
@@ -21,7 +24,7 @@ export function surfacePoint(map: Map, lat: number, lon: number, alt = 0) {
  * a little above the surface.
  */
 export function drapeTrack(
-  map: Map,
+  surface: Surface,
   track: Track,
   cell: number,
   lift: number
@@ -33,7 +36,7 @@ export function drapeTrack(
   for (let i = 0; i < n; i++) {
     const ele = elevation[i]
     const p = surfacePoint(
-      map,
+      surface,
       source[i].lat,
       source[i].lon,
       Number.isNaN(ele) ? 0 : ele
@@ -64,7 +67,7 @@ export function drapeTrack(
     for (let k = 1; k < parts; k++) {
       const t = k / parts
       const p = surfacePoint(
-        map,
+        surface,
         a.lat + (b.lat - a.lat) * t,
         a.lon + (b.lon - a.lon) * t
       )

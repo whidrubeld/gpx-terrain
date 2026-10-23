@@ -9,6 +9,7 @@ scripts/.cache
 # test artifacts
 playwright-report
 test-results
+.playwright-mcp
 
 # editors
 .idea

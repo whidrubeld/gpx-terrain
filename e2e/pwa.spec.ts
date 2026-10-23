@@ -44,9 +44,9 @@ test('is installable and starts offline', async ({ page, context }) => {
     page.getByRole('heading', { name: 'GPX Terrain', level: 1 })
   ).toBeVisible()
   // the example tracks are precached too
-  await page.getByRole('button', { name: /Eiger Trail/ }).click()
+  await page.getByRole('button', { name: /Ouchy – Sauvabelin/ }).click()
   await expect(
-    page.getByRole('button', { name: 'Change track: Eiger Trail' })
+    page.getByRole('button', { name: 'Change track: Ouchy – Sauvabelin' })
   ).toBeVisible()
   await expect(page.getByRole('contentinfo')).toContainText('Offline')
 })

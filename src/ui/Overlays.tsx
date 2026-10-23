@@ -56,7 +56,8 @@ export function LoadingHud() {
   }, [busy])
 
   if (!busy && !linger) return null
-  const n = terrain.fit?.nTiles ?? 3
+  const columns = terrain.fit?.columns ?? 3
+  const rows = terrain.fit?.rows ?? 3
   const label = t(
     loading
       ? 'loading.reading'
@@ -70,10 +71,10 @@ export function LoadingHud() {
   const cells = (size: string) => (
     <div
       className='grid gap-1'
-      style={{ gridTemplateColumns: `repeat(${n}, ${size})` }}
+      style={{ gridTemplateColumns: `repeat(${columns}, ${size})` }}
       aria-hidden
     >
-      {Array.from({ length: n * n }, (_, i) => (
+      {Array.from({ length: columns * rows }, (_, i) => (
         <span
           key={i}
           className={cx(

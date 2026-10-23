@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo, useRef } from 'react'
 import { type Camera, type Group, Raycaster, Vector2, Vector3 } from 'three'
+import type { GeoLocation } from 'three-map-terrain'
 
 import {
   indexAtProgress,
@@ -185,17 +186,29 @@ export function TerrainCursor() {
 
 // ------------------------------------------------------------ pointer
 
+/** Relative change of the camera's matrix that counts as a move. */
+const MOVED = 1e-7
+
+const sameLocation = (a: GeoLocation | null, b: GeoLocation | null) =>
+  a === b ||
+  (a !== null &&
+    b !== null &&
+    a.lat === b.lat &&
+    a.lon === b.lon &&
+    a.alt === b.alt)
+
 /** Pointer distance (CSS px) within which the route counts as hovered. */
 const HOVER_RADIUS = 16
 /** Larger tracks are searched coarsely first. */
 const MAX_PROJECTED = 20_000
 
 /**
- * Hover and click on the scene: `map.pick` for the terrain under the pointer,
+ * Hover and click on the scene: the terrain under the pointer (`pick`),
  * and the track point nearest to the pointer on screen.
  */
 export function PointerProbe() {
   const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
   const camera = useThree((s) => s.camera)
   const pointer = useRef({
     x: 0,
@@ -218,10 +231,13 @@ export function PointerProbe() {
       state.y = event.clientY - rect.top
       state.inside = true
       state.dirty = true
+      // the cursor follows the pointer on the terrain: a frame for it
+      invalidate()
     }
     const leave = () => {
       state.inside = false
       state.dirty = true
+      invalidate()
     }
     const press = (event: PointerEvent) => {
       down.current = { x: event.clientX, y: event.clientY }
@@ -252,13 +268,17 @@ export function PointerProbe() {
       element.removeEventListener('pointerdown', press)
       element.removeEventListener('pointerup', release)
     }
-  }, [gl])
+  }, [gl, invalidate])
 
   useFrame((state) => {
     const p = pointer.current
-    // a still pointer hovers something else when the camera moves
+    // a still pointer hovers something else when the camera moves — by
+    // more than the rounding of the controls, which recompute it every frame
     const matrix = camera.matrixWorld.elements
-    const cameraMoved = matrix.some((v, i) => v !== lastCamera.current[i])
+    const cameraMoved = matrix.some(
+      (v, i) =>
+        !(Math.abs(v - lastCamera.current[i]) <= MOVED * (1 + Math.abs(v)))
+    )
     if (cameraMoved) lastCamera.current = Array.from(matrix)
     if (!p.dirty && !(cameraMoved && p.inside)) return
     p.dirty = false
@@ -278,15 +298,16 @@ export function PointerProbe() {
     ndc.set((p.x / width) * 2 - 1, -(p.y / height) * 2 + 1)
     raycaster.setFromCamera(ndc, camera)
 
-    const { map, ready, drape } = terrainStore.state
+    const { surface, ready, drape } = terrainStore.state
     const world = sceneRefs.world
-    const hit = map && ready ? map.pick(raycaster) : undefined
+    const hit = surface && ready ? surface.pick(raycaster) : undefined
     sceneRefs.pointer =
       hit && world ? world.worldToLocal(hit.point.clone()) : null
-    hoverStore.setState((s) => ({
-      ...s,
-      cursor: hit ? { lat: hit.lat, lon: hit.lon, alt: hit.alt } : null
-    }))
+    const cursor = hit ? { lat: hit.lat, lon: hit.lon, alt: hit.alt } : null
+    // the same place: no change, so no frame asked for
+    hoverStore.setState((s) =>
+      sameLocation(s.cursor, cursor) ? s : { ...s, cursor }
+    )
 
     const index =
       drape && world

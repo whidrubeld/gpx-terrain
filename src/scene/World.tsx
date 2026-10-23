@@ -7,7 +7,6 @@ import { withTerrainElevation } from '../gpx/track'
 import { fitTerrain } from '../lib/fit'
 import { settingsStore } from '../state/settings'
 import { terrainStore, viewerStore } from '../state/viewer'
-import { Base } from './Base'
 import { drapeTrack } from './drape'
 import { Graticule } from './Graticule'
 import { easeOutCubic, INTRO, introPhase } from './look'
@@ -21,6 +20,13 @@ import { Terrain } from './Terrain'
 const FLAT = 0.02
 
 /**
+ * Meters the route lies above the surface: on the roads, not over them. The
+ * route's lines are drawn a little nearer the camera (see Route.tsx), so
+ * they need no more to stay in front of it.
+ */
+const LIFT = 0.5
+
+/**
  * Terrain and everything placed on it, in terrain coordinates. `scale.z` is
  * the vertical exaggeration (times the intro "rise"), so changing it costs
  * nothing: no tile is rebuilt.
@@ -30,7 +36,9 @@ export function World() {
   const track = useSelector(viewerStore, (s) => s.track)
   const tiles = useSelector(settingsStore, (s) => s.tiles)
   const segments = useSelector(settingsStore, (s) => s.segments)
+  const lod = useSelector(settingsStore, (s) => s.lod)
   const map = useSelector(terrainStore, (s) => s.map)
+  const surface = useSelector(terrainStore, (s) => s.surface)
   const ready = useSelector(terrainStore, (s) => s.ready)
   const revision = useSelector(terrainStore, (s) => s.revision)
 
@@ -48,10 +56,12 @@ export function World() {
     }
   }, [])
 
-  // once the grid is loaded: DEM elevations for tracks without them, then the drape
+  // once the grid is loaded: DEM elevations for tracks without them, then the
+  // drape — again whenever the surface changes (more tiles, another level)
   useEffect(() => {
     // the store may already hold the next map (this render's one is being cleaned)
-    if (!map || !ready || !track || terrainStore.state.map !== map) return
+    if (!map || !surface || !ready || !track) return
+    if (terrainStore.state.map !== map) return
     if (track.elevationSource === 'none') {
       const zScale = map.options.zScale
       viewerStore.setState((s) =>
@@ -59,7 +69,7 @@ export function World() {
           ? {
               ...s,
               track: withTerrainElevation(track, (p) => {
-                const position = map.getTerrainPositionSync(p, {
+                const position = surface.getTerrainPositionSync(p, {
                   loadTile: false
                 })
                 return position ? position.z / zScale : undefined
@@ -69,12 +79,13 @@ export function World() {
       )
       return
     }
-    const cell = map.options.tileSize / map.options.tileSegments
-    const drape = drapeTrack(map, track, cell, cell * 0.3)
+    // the finest mesh drawn: the detailed one
+    const cell = map.options.tileSize / segments
+    const drape = drapeTrack(surface, track, cell, LIFT * map.options.zScale)
     terrainStore.setState((s) => (s.map === map ? { ...s, drape } : s))
-  }, [map, ready, revision, track])
+  }, [map, surface, ready, revision, track, segments])
 
-  useFrame((_, delta) => {
+  useFrame(({ invalidate }, delta) => {
     const node = group.current
     if (!node) return
     const { exaggeration, animations } = settingsStore.state
@@ -89,14 +100,20 @@ export function World() {
     const k = animations ? 1 - Math.exp(-delta * 12) : 1
     node.scale.z += (target - node.scale.z) * k
     if (Math.abs(target - node.scale.z) < 1e-4) node.scale.z = target
+    // easing on: the next frame
+    else invalidate()
   })
 
   return (
     <group ref={group} name='world'>
       {fit && (
-        <Terrain key={`${fit.key}:${segments}`} fit={fit} segments={segments} />
+        <Terrain
+          key={`${fit.key}:${segments}:${lod}`}
+          fit={fit}
+          segments={segments}
+          lod={lod}
+        />
       )}
-      <Base />
       <Graticule />
       <Route />
       <Markers />

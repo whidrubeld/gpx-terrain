@@ -4,15 +4,15 @@
 
 export const PRESETS = [
   {
-    id: 'eiger-trail',
-    name: 'Eiger Trail',
-    activity: 'hiking',
+    id: 'lausanne',
+    name: 'Ouchy – Sauvabelin',
+    activity: 'running',
     /** m */
-    distance: 5841,
-    ascent: 58,
-    descent: 749,
+    distance: 4675,
+    ascent: 297,
+    descent: 10,
     /** ms */
-    duration: 6_720_000
+    duration: 2_192_000
   },
   {
     id: 'stelvio',

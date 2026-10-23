@@ -3,7 +3,9 @@ import { useEffect, useReducer, useRef } from 'react'
 
 import { useT } from '../i18n'
 import { formatBytes, formatCount, formatDecimal } from '../lib/format'
+import { coarseSegments } from '../scene/lod'
 import { meanFrame, perf } from '../scene/perf'
+import { settingsStore } from '../state/settings'
 import { terrainStore, uiStore } from '../state/viewer'
 import { Panel, Value } from './controls'
 
@@ -63,14 +65,21 @@ export function PerfBody() {
   const theme = useSelector(uiStore, (s) => s.theme)
   const tiles = useSelector(
     terrainStore,
-    (s) => ({ loaded: s.loaded, textured: s.textured, total: s.total }),
+    (s) => ({
+      loaded: s.loaded,
+      textured: s.textured,
+      total: s.total,
+      detailed: s.detailed
+    }),
     {
       compare: (a, b) =>
         a.loaded === b.loaded &&
         a.textured === b.textured &&
-        a.total === b.total
+        a.total === b.total &&
+        a.detailed === b.detailed
     }
   )
+  const segments = useSelector(settingsStore, (s) => s.segments)
   const [, refresh] = useReducer((n: number) => n + 1, 0)
   const graph = useRef<HTMLCanvasElement>(null)
 
@@ -97,6 +106,13 @@ export function PerfBody() {
     [
       t('perf.tiles'),
       `${tiles.loaded}/${tiles.total} dem · ${tiles.textured}/${tiles.total} img`
+    ],
+    [
+      t('perf.lod'),
+      // tiles in detail, and the meshes: coarse → detailed
+      tiles.detailed === null
+        ? t('view.off')
+        : `${tiles.detailed}/${tiles.total} · ${coarseSegments(segments)}→${segments}`
     ],
     [
       t('perf.resolution'),

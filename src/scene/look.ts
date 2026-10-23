@@ -1,6 +1,11 @@
 import { CanvasTexture, NearestFilter, SRGBColorSpace } from 'three'
+import {
+  CROWN_COLOR,
+  type ImageryProcessor,
+  WATER_COLOR
+} from 'three-map-terrain'
 
-import { settingsStore } from '../state/settings'
+import { type Feature, type Look, settingsStore } from '../state/settings'
 import { terrainStore } from '../state/viewer'
 
 /** Scene colors per theme; the 2D tokens live in index.css. */
@@ -23,7 +28,142 @@ export const PALETTE = {
   }
 } as const
 
-export type Palette = (typeof PALETTE)[keyof typeof PALETTE]
+export type Theme = keyof typeof PALETTE
+export type Palette = (typeof PALETTE)[Theme]
+
+/** In lines, how opaque the features' faces are under them: a light fill. */
+export const WIRE_FILL = 0.12
+
+/**
+ * The fill of a feature in lines — none under trees: their outlines read as
+ * woods on their own, and a fill there is the most of what the transparent
+ * pass draws.
+ */
+export const wireFill = (feature: Feature) =>
+  feature === 'trees' ? 0 : WIRE_FILL
+
+/** How a look draws the terrain and the map features, in one theme. */
+export interface LookStyle {
+  /** the photo, the photo in gray, or none */
+  imagery: 'color' | 'mono' | null
+  /** lines: the terrain's triangles, the outlines of the features over a fill */
+  wireframe: boolean
+  /** the terrain without imagery — and while its imagery loads; in lines, the lines */
+  terrain: string
+  buildings: string
+  roads: string
+  water: string
+  trees: string
+}
+
+/**
+ * The looks. On the photo, features keep the colors of the library (white
+ * buildings, blue water, green trees); on the gray photo they are gray; the
+ * model is a colored map in relief; in lines, the terrain is a quiet grid
+ * and every feature is outlined in a color of its own over a light fill of
+ * it, so that none merges into the grid — muted, so that none outshines
+ * the route.
+ */
+export const LOOK_STYLES: Readonly<
+  Record<Look, Readonly<Record<Theme, LookStyle>>>
+> = {
+  photo: {
+    dark: {
+      imagery: 'color',
+      wireframe: false,
+      terrain: PALETTE.dark.relief,
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: WATER_COLOR,
+      trees: CROWN_COLOR
+    },
+    light: {
+      imagery: 'color',
+      wireframe: false,
+      terrain: PALETTE.light.relief,
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: WATER_COLOR,
+      trees: CROWN_COLOR
+    }
+  },
+  mono: {
+    dark: {
+      imagery: 'mono',
+      wireframe: false,
+      terrain: PALETTE.dark.relief,
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: '#404040',
+      trees: '#303030'
+    },
+    light: {
+      imagery: 'mono',
+      wireframe: false,
+      terrain: PALETTE.light.relief,
+      buildings: '#ffffff',
+      roads: '#d6d6d6',
+      water: '#a8a8a8',
+      trees: '#8c8c8c'
+    }
+  },
+  model: {
+    dark: {
+      imagery: null,
+      wireframe: false,
+      // ground, roads, buildings a step lighter each; the route the brightest
+      terrain: '#57544e',
+      buildings: '#9b968e',
+      roads: '#76726b',
+      water: '#3d6b92',
+      trees: '#4d7540'
+    },
+    light: {
+      imagery: null,
+      wireframe: false,
+      terrain: '#e6e0d4',
+      buildings: '#ffffff',
+      roads: '#faf8f3',
+      water: '#8fb8d9',
+      trees: '#7fa463'
+    }
+  },
+  wireframe: {
+    dark: {
+      imagery: null,
+      wireframe: true,
+      terrain: '#3d3d3d',
+      buildings: '#8f8f8f',
+      roads: '#8c7759',
+      water: '#3b5d7b',
+      trees: '#4f7049'
+    },
+    light: {
+      imagery: null,
+      wireframe: true,
+      terrain: '#c4c4c4',
+      buildings: '#8c8c8c',
+      roads: '#cfb48f',
+      water: '#a3c1db',
+      trees: '#a6c49e'
+    }
+  }
+}
+
+/** Whether a look shows the photo: then it is credited. */
+export const showsImagery = (look: Look) =>
+  LOOK_STYLES[look].dark.imagery !== null
+
+/** The `mono` imagery: luminance, with a little extra contrast. */
+export const monochrome: ImageryProcessor = (context, { width, height }) => {
+  const pixels = context.getImageData(0, 0, width, height)
+  const { data } = pixels
+  for (let i = 0; i < data.length; i += 4) {
+    const luma = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]
+    data[i] = data[i + 1] = data[i + 2] = (luma - 118) * 1.25 + 128
+  }
+  context.putImageData(pixels, 0, 0)
+}
 
 // ------------------------------------------------------------ intro timeline
 
@@ -33,6 +173,21 @@ export const INTRO = {
   camera: [0, 2.6],
   route: [0.9, 2.4]
 } as const satisfies Record<string, readonly [number, number]>
+
+/** Seconds after the grid is ready when the last intro step ends. */
+export const INTRO_END = Math.max(
+  ...Object.values(INTRO).map(([start, duration]) => start + duration)
+)
+
+/** Whether the intro is still playing: the scene moves on its own. */
+export function introPlaying() {
+  const { readyAt } = terrainStore.state
+  return (
+    readyAt !== null &&
+    settingsStore.state.animations &&
+    performance.now() - readyAt < INTRO_END * 1000
+  )
+}
 
 /** 0…1 progress of an intro step; always 1 with animations off. */
 export function introPhase([start, duration]: readonly [

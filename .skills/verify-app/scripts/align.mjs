@@ -26,6 +26,7 @@ const TRACK = [
   ['top bar', 'header > button', 2],
   ['buttons', '.btn'],
   ['toggles', 'label.flex.h-6'],
+  ['disclosure', 'button.flex.h-6[aria-expanded]', 1],
   ['slider heads', 'label.grid > span.flex', 2],
   ['kbd', '.kbd']
 ]

@@ -119,8 +119,19 @@ export interface Drape {
   lineIndex: Float32Array
 }
 
+/**
+ * The terrain as it is drawn, for what lies on it and for picking: a `Map`,
+ * or the levels of detail of two (scene/lod.ts).
+ */
+export type Surface = Pick<
+  Map,
+  'getTerrainPositionSync' | 'getPosition' | 'getLocation' | 'pick'
+>
+
 export interface TerrainState {
+  /** the map of the whole grid (with levels of detail: the coarse one) */
   map: Map | null
+  surface: Surface | null
   fit: TerrainFit | null
   /** the grid has loaded, or enough of it after a timeout (see `Terrain`) */
   ready: boolean
@@ -132,6 +143,8 @@ export interface TerrainState {
   loaded: number
   textured: number
   total: number
+  /** tiles drawn in detail; `null` without levels of detail */
+  detailed: number | null
   /** lowest and highest vertex, scene units (before exaggeration) */
   heights: { min: number; max: number } | null
   drape: Drape | null
@@ -139,6 +152,7 @@ export interface TerrainState {
 
 export const terrainStore = createStore<TerrainState>({
   map: null,
+  surface: null,
   fit: null,
   ready: false,
   readyAt: null,
@@ -146,6 +160,7 @@ export const terrainStore = createStore<TerrainState>({
   loaded: 0,
   textured: 0,
   total: 0,
+  detailed: null,
   heights: null,
   drape: null
 })

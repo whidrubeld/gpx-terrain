@@ -1,6 +1,7 @@
 // Service worker: the app shell (scripts, styles, fonts, icons, example
-// tracks) is precached, so the app starts offline; terrain and imagery tiles
-// are cached as they are viewed, so tracks seen before work offline too.
+// tracks) is precached, so the app starts offline; terrain, imagery and map
+// feature tiles are cached as they are viewed, so tracks seen before work
+// offline too.
 
 import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
@@ -10,7 +11,7 @@ import {
   precacheAndRoute
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 
 declare let self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: (string | { url: string; revision: string | null })[]
@@ -39,6 +40,20 @@ const TILE_HOSTS: [origin: string, path: string][] = [
   ['https://tiles.maps.eox.at', '/wmts']
 ]
 
+/**
+ * three-map-terrain retries a body it could not decode with `cache:
+ * 'reload'`: go to the network then, and replace the entry.
+ */
+const reloadBypassesCache = {
+  cachedResponseWillBeUsed: ({
+    request,
+    cachedResponse
+  }: {
+    request: Request
+    cachedResponse?: Response
+  }) => Promise.resolve(request.cache === 'reload' ? null : cachedResponse)
+}
+
 registerRoute(
   ({ url }) =>
     TILE_HOSTS.some(
@@ -47,11 +62,8 @@ registerRoute(
   new CacheFirst({
     cacheName: 'tiles',
     plugins: [
+      reloadBypassesCache,
       {
-        // three-map-terrain retries a body it could not decode with
-        // `cache: 'reload'`: go to the network then, and replace the entry
-        cachedResponseWillBeUsed: ({ request, cachedResponse }) =>
-          Promise.resolve(request.cache === 'reload' ? null : cachedResponse),
         // only complete images are stored
         cacheWillUpdate: async ({ response }) =>
           response.status === 200 && (await decodes(response.clone()))
@@ -61,6 +73,35 @@ registerRoute(
       new ExpirationPlugin({
         // a 3×3 grid is 45 tiles, a 5×5 one 125
         maxEntries: 2000,
+        maxAgeSeconds: 60 * 60 * 24 * 30,
+        purgeOnQuotaError: true
+      })
+    ]
+  })
+)
+
+// Map features: OpenFreeMap's TileJSON names the current planet build (it
+// changes every few days: the network first), whose tiles never change
+const OPENFREEMAP = 'https://tiles.openfreemap.org'
+
+registerRoute(
+  ({ url }) => url.origin === OPENFREEMAP && url.pathname === '/planet',
+  new NetworkFirst({ cacheName: 'tilejson', networkTimeoutSeconds: 4 })
+)
+
+registerRoute(
+  ({ url }) => url.origin === OPENFREEMAP && url.pathname.endsWith('.pbf'),
+  new CacheFirst({
+    cacheName: 'vector-tiles',
+    plugins: [
+      reloadBypassesCache,
+      {
+        cacheWillUpdate: ({ response }) =>
+          Promise.resolve(response.status === 200 ? response : null)
+      },
+      new ExpirationPlugin({
+        // up to 4 a terrain tile, shared by the four layers
+        maxEntries: 1000,
         maxAgeSeconds: 60 * 60 * 24 * 30,
         purgeOnQuotaError: true
       })

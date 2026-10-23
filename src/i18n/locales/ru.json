@@ -37,7 +37,7 @@
     "credits": "Маршруты примеров © участники OpenStreetMap (ODbL); время в них синтезировано."
   },
   "presets": {
-    "eiger-trail": "Швейцария · Бернский Оберланд",
+    "lausanne": "Швейцария · Лозанна",
     "stelvio": "Италия · Южный Тироль",
     "bright-angel": "США · Гранд-Каньон"
   },
@@ -123,27 +123,43 @@
     "start": "Старт",
     "finish": "Финиш"
   },
-  "view": {
-    "imagery": "Подложка",
-    "color": "Цвет",
+  "look": {
+    "label": "Стиль",
+    "photo": "Фото",
     "mono": "Ч/б",
-    "relief": "Рельеф",
-    "exaggeration": "Масштаб высот",
+    "model": "Макет",
     "wireframe": "Каркас",
+    "about": {
+      "photo": "Спутниковый снимок · объёмные здания",
+      "mono": "Снимок в сером · белые здания и дороги",
+      "model": "Цветной макет · здания, дороги, вода, лес",
+      "wireframe": "Линии · у каждого объекта свой цвет"
+    }
+  },
+  "view": {
+    "exaggeration": "Масштаб высот",
+    "features": "Объекты карты",
+    "buildings": "Здания",
+    "roads": "Дороги",
+    "water": "Вода",
+    "trees": "Деревья",
+    "fromZoom": "С Z{zoom}",
     "graticule": "Координатная сетка",
     "distanceMarks": "Отметки дистанции",
     "waypoints": "Путевые точки",
     "base": "Подставка",
     "fog": "Туман",
+    "lod": "Уровни детализации",
     "autoRotate": "Автовращение",
     "follow": "Следовать за маркером",
     "animations": "Анимации",
     "shortcuts": "Горячие клавиши",
+    "advanced": "Расширенные",
     "pixelSize": "Размер пикселя",
     "off": "Выкл",
     "tiles": "Тайлы",
     "mesh": "Детализация",
-    "note": "Тайлы и детализация перестраивают карту. Остальное меняется на лету, без перезагрузки."
+    "note": "Тайлы, детализация и её уровни перестраивают карту. Остальное меняется на лету."
   },
   "legend": {
     "travelled": "Маршрут · пройдено",
@@ -176,6 +192,7 @@
     "textures": "Текстуры",
     "programs": "Шейдеры",
     "tiles": "Тайлы",
+    "lod": "LOD",
     "resolution": "Разрешение",
     "heap": "Память JS"
   },
@@ -192,9 +209,13 @@
     "offTerrain": "— вне рельефа —",
     "offline": "Офлайн",
     "attribution": "Подложка {imagery} (данные Copernicus Sentinel 2016) · Высоты {elevation}",
+    "elevation": "Высоты {elevation}",
     "routes": "Маршруты © участники {osm}",
     "attributionShort": "© EOX Sentinel-2 cloudless 2016 · AWS Terrain Tiles",
+    "elevationShort": "AWS Terrain Tiles",
     "routesShort": "Маршруты © OpenStreetMap",
+    "mapData": "Карта {openfreemap} © {openmaptiles} © участники {osm}",
+    "mapDataShort": "© OpenFreeMap · OpenMapTiles · OpenStreetMap",
     "builtWith": "Сделано на three-map-terrain ↗"
   },
   "loading": {
@@ -287,12 +308,13 @@
       "pixelSize": "Размер пикселя",
       "animations": "Анимации",
       "theme": "Тема: авто / тёмная / светлая",
-      "imagery": "Подложка: цвет / ч/б / рельеф",
-      "wireframe": "Каркас",
+      "look": "Стиль: фото / ч/б / макет / каркас",
+      "wireframe": "Каркас и обратно",
       "graticule": "Координатная сетка",
       "distanceMarks": "Отметки дистанции",
       "waypoints": "Путевые точки",
       "base": "Подставка",
+      "features": "Объекты карты вкл / выкл",
       "track": "Сведения о треке",
       "view": "Настройки вида",
       "legend": "Легенда",
@@ -304,7 +326,7 @@
       "close": "Закрыть диалог"
     },
     "shortcutsOff": "Одиночные горячие клавиши выключены. Включите их: Вид → Горячие клавиши.",
-    "text": "Перетащите GPS-запись и посмотрите её на настоящем рельефе. Рельеф, подложка и геопривязка — это {library}: высоты из AWS Terrain Tiles, снимки Sentinel-2 cloudless от EOX. Ваши файлы остаются в браузере.",
+    "text": "Перетащите GPS-запись и посмотрите её на настоящем рельефе. Рельеф, подложка, объекты карты и геопривязка — это {library}: высоты из AWS Terrain Tiles, снимки Sentinel-2 cloudless от EOX, здания, дороги, вода и деревья — из OpenStreetMap через OpenFreeMap. Ваши файлы остаются в браузере.",
     "offline": "Работает офлайн: приложение и просмотренный рельеф хранятся на устройстве.",
     "install": "Установить приложение",
     "sourceCode": "Исходный код",

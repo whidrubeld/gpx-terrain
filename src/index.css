@@ -58,8 +58,8 @@
   --faint: #3a3a3a;
   --line: rgb(255 255 255 / 0.12);
   --line-strong: rgb(255 255 255 / 0.3);
-  --panel: rgb(10 10 10 / 0.7);
-  --panel-solid: rgb(10 10 10 / 0.84);
+  --panel: rgb(10 10 10 / 0.9);
+  --panel-solid: rgb(10 10 10 / 0.95);
   --dot: rgb(255 255 255 / 0.08);
 }
 
@@ -72,8 +72,8 @@
     --faint: #c6c6c6;
     --line: rgb(0 0 0 / 0.12);
     --line-strong: rgb(0 0 0 / 0.32);
-    --panel: rgb(242 242 242 / 0.74);
-    --panel-solid: rgb(242 242 242 / 0.88);
+    --panel: rgb(242 242 242 / 0.92);
+    --panel-solid: rgb(242 242 242 / 0.96);
     --dot: rgb(0 0 0 / 0.09);
   }
 }
@@ -86,8 +86,8 @@
   --faint: #c6c6c6;
   --line: rgb(0 0 0 / 0.12);
   --line-strong: rgb(0 0 0 / 0.32);
-  --panel: rgb(242 242 242 / 0.74);
-  --panel-solid: rgb(242 242 242 / 0.88);
+  --panel: rgb(242 242 242 / 0.92);
+  --panel-solid: rgb(242 242 242 / 0.96);
   --dot: rgb(0 0 0 / 0.09);
 }
 
@@ -169,12 +169,15 @@
 
   /* ------------------------------------------------------------ surfaces */
 
+  /*
+   * Surfaces over the scene are nearly opaque, without backdrop-filter: a
+   * blur under them is composited again on every frame of the canvas, which
+   * Safari pays for in stutter while the camera moves.
+   */
   .panel {
     position: relative;
     border: 1px solid var(--line);
     background: var(--panel);
-    -webkit-backdrop-filter: blur(16px) saturate(0);
-    backdrop-filter: blur(16px) saturate(0);
   }
 
   /* pixel corner brackets */
@@ -201,8 +204,6 @@
     padding: 8px 10px;
     border: 1px solid var(--line-strong);
     background: var(--panel-solid);
-    -webkit-backdrop-filter: blur(12px) saturate(0);
-    backdrop-filter: blur(12px) saturate(0);
     font-size: var(--text-2xs);
     line-height: 1rem;
     letter-spacing: 0.06em;
@@ -577,8 +578,8 @@
   /* ------------------------------------------------------------ motion */
 
   /*
-   * Content steps in. Never put this on the glass (backdrop-filter) element
-   * itself, and no clip-path: WebKit can leave such an element half painted.
+   * Content steps in. No clip-path: WebKit can leave such an element half
+   * painted.
    */
   .appear {
     animation: appear 0.24s steps(4, end) both;

@@ -24,6 +24,27 @@ import {
 } from './look'
 
 /**
+ * Share of its distance from the camera by which the route is drawn nearer,
+ * along the line of sight: where it shows on screen does not change, but it
+ * stays in front of the surface it lies on (and of roads, drawn flush on
+ * it) without being lifted off it. Hills and buildings still hide it.
+ */
+const PULL = 0.003
+
+/** A `LineMaterial` whose lines are pulled towards the camera by `PULL`. */
+function pulled(material: LineMaterial) {
+  const end = 'vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );'
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      end,
+      `${end}\n\tstart.xyz *= ${1 - PULL};\n\tend.xyz *= ${1 - PULL};`
+    )
+  }
+  material.customProgramCacheKey = () => 'route-pulled'
+  return material
+}
+
+/**
  * The route as screen-space fat lines (`Line2`), drawn in layers:
  * x-ray (through the terrain, faint) → halo → remaining part → travelled part.
  * Drawing progress is `instanceCount`: one instance per segment.
@@ -44,13 +65,15 @@ class RouteLines {
     this.segments = drape.line.length / 3 - 1
 
     const material = (linewidth: number, opacity: number, depthTest = true) =>
-      new LineMaterial({
-        linewidth,
-        transparent: true,
-        opacity,
-        depthTest,
-        depthWrite: false
-      })
+      pulled(
+        new LineMaterial({
+          linewidth,
+          transparent: true,
+          opacity,
+          depthTest,
+          depthWrite: false
+        })
+      )
     this.materials = {
       xray: material(1.5, 0.22, false),
       halo: material(6, 0.55),

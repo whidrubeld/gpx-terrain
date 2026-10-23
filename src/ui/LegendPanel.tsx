@@ -1,4 +1,4 @@
-import { useSelector } from '@tanstack/react-store'
+import { shallow, useSelector } from '@tanstack/react-store'
 import type { ReactNode } from 'react'
 
 import { useT } from '../i18n'
@@ -8,10 +8,11 @@ import {
   formatDecimal,
   joinParts
 } from '../lib/format'
-import { settingsStore } from '../state/settings'
-import { terrainStore, viewerStore } from '../state/viewer'
+import { FEATURES, settingsStore, shownFeatures } from '../state/settings'
+import { terrainStore, uiStore, viewerStore } from '../state/viewer'
 import { graticuleStep } from '../scene/Graticule'
-import { GLYPHS, type GlyphName } from '../scene/look'
+import { FEATURE_MIN_ZOOM } from '../scene/layers'
+import { GLYPHS, type GlyphName, LOOK_STYLES, wireFill } from '../scene/look'
 import { markStep } from '../scene/Markers'
 import { Panel } from './controls'
 
@@ -64,6 +65,51 @@ function Line({
   )
 }
 
+/**
+ * A map feature in the current look: roads as a line, the others as an
+ * area — solid, or in lines its outline over the scene's light fill.
+ */
+function Swatch({
+  color,
+  line,
+  outline,
+  fill
+}: {
+  color: string
+  line: boolean
+  outline: boolean
+  /** in lines, how opaque the fill under the outline is */
+  fill: number
+}) {
+  return (
+    <svg width={28} height={8} aria-hidden>
+      {line ? (
+        <line
+          x1={0}
+          x2={28}
+          y1={4}
+          y2={4}
+          stroke={color}
+          strokeWidth={2}
+          shapeRendering='crispEdges'
+        />
+      ) : (
+        <rect
+          x={6.5}
+          y={0.5}
+          width={15}
+          height={7}
+          fill={color}
+          fillOpacity={outline ? fill : 1}
+          stroke={outline ? color : 'currentColor'}
+          strokeOpacity={outline ? 1 : 0.4}
+          shapeRendering='crispEdges'
+        />
+      )}
+    </svg>
+  )
+}
+
 function Row({
   symbol,
   label,
@@ -103,7 +149,16 @@ export function LegendBody() {
   const fit = useSelector(terrainStore, (s) => s.fit)
   const heights = useSelector(terrainStore, (s) => s.heights)
   const exaggeration = useSelector(settingsStore, (s) => s.exaggeration)
+  const look = useSelector(settingsStore, (s) => s.look)
+  const shown = useSelector(settingsStore, shownFeatures, { compare: shallow })
+  const theme = useSelector(uiStore, (s) => s.theme)
   const step = fit ? graticuleStep(fit) : null
+  const style = LOOK_STYLES[look][theme]
+  // the features drawn at this zoom
+  const features = FEATURES.filter(
+    (feature) =>
+      shown[feature] && fit !== null && fit.zoom >= FEATURE_MIN_ZOOM[feature]
+  )
 
   return (
     <>
@@ -145,17 +200,34 @@ export function LegendBody() {
           label={t('legend.graticule')}
           detail={step ? `${step}°` : undefined}
         />
+        {features.map((feature) => (
+          <Row
+            key={feature}
+            symbol={
+              <Swatch
+                color={style[feature]}
+                line={feature === 'roads'}
+                outline={style.wireframe}
+                fill={wireFill(feature)}
+              />
+            }
+            label={t(`view.${feature}`)}
+          />
+        ))}
       </ul>
 
       {fit && (
         <dl className='mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 border-t border-line pt-2 text-2xs uppercase tracking-[0.06em]'>
           <dt className='text-muted'>{t('legend.zoom')}</dt>
           <dd className='text-right tabular-nums'>
-            {t('legend.zoomValue', { zoom: fit.zoom, imagery: fit.zoom + 1 })}
+            {t('legend.zoomValue', {
+              zoom: fit.zoom,
+              imagery: fit.imageryZoom
+            })}
           </dd>
           <dt className='text-muted'>{t('legend.grid')}</dt>
           <dd className='text-right tabular-nums'>
-            {fit.nTiles}×{fit.nTiles} ·{' '}
+            {fit.columns}×{fit.rows} ·{' '}
             {t('legend.perTile', {
               size: joinParts(distanceParts(fit.metersPerUnit * fit.tileSize))
             })}

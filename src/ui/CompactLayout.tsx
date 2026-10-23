@@ -2,9 +2,13 @@ import { useSelector } from '@tanstack/react-store'
 import type { ReactNode } from 'react'
 
 import { type MessageKey, useT } from '../i18n'
+import { drawsFeatures } from '../scene/layers'
+import { showsImagery } from '../scene/look'
+import { settingsStore, shownFeatures } from '../state/settings'
 import {
   openChooser,
   type SheetId,
+  terrainStore,
   toggleSheet,
   uiStore,
   viewerStore
@@ -110,6 +114,12 @@ function CompactProfile({ short }: { short: boolean }) {
   const t = useT()
   const track = useSelector(viewerStore, (s) => s.track)
   const preset = useSelector(viewerStore, (s) => s.source?.kind === 'preset')
+  const zoom = useSelector(terrainStore, (s) => s.fit?.zoom)
+  const features = useSelector(
+    settingsStore,
+    (s) => zoom !== undefined && drawsFeatures(shownFeatures(s), zoom)
+  )
+  const imagery = useSelector(settingsStore, (s) => showsImagery(s.look))
   return (
     <section
       className='panel ticks pointer-events-auto grid min-w-0 gap-1.5 px-2 pb-1 pt-1.5'
@@ -127,8 +137,10 @@ function CompactProfile({ short }: { short: boolean }) {
         </>
       )}
       <p className='truncate text-3xs uppercase tracking-[0.08em] text-muted'>
-        {t('status.attributionShort')}
-        {preset && ` · ${t('status.routesShort')}`}
+        {t(imagery ? 'status.attributionShort' : 'status.elevationShort')}
+        {features
+          ? ` · ${t('status.mapDataShort')}`
+          : preset && ` · ${t('status.routesShort')}`}
       </p>
     </section>
   )

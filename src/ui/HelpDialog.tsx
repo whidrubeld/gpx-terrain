@@ -161,7 +161,7 @@ export function HelpDialog() {
       labelledBy='help-title'
       className='w-[min(60rem,calc(100vw-2rem))]'
     >
-      <header className='sticky top-0 z-10 flex h-11 items-center gap-3 border-b border-line bg-panel-solid px-4'>
+      <header className='sticky top-0 z-10 flex h-11 items-center gap-3 border-b border-line bg-panel-solid pl-4 pr-2'>
         <Icon name={touch ? 'help' : 'keyboard'} cell={1} />
         <h2 id='help-title' className='dot text-lg'>
           {t('help.title')}

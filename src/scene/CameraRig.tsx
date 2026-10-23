@@ -1,17 +1,12 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo, useRef } from 'react'
-import {
-  Box3,
-  MathUtils,
-  type Mesh,
-  type PerspectiveCamera,
-  Vector3
-} from 'three'
+import { Box3, MathUtils, type PerspectiveCamera, Vector3 } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import type { Map } from 'three-map-terrain'
 
 import { indexAtProgress } from '../gpx/track'
+import { gridSize } from '../lib/fit'
 import { settingsStore } from '../state/settings'
 import {
   commands,
@@ -19,6 +14,7 @@ import {
   type FocusTarget,
   type Insets,
   playbackStore,
+  type Surface,
   terrainStore,
   uiStore,
   viewerStore
@@ -26,6 +22,7 @@ import {
 import { lineAt, surfacePoint } from './drape'
 import { easeInOutCubic, frameStep, INTRO } from './look'
 import { sceneRefs } from './refs'
+import { placedTiles } from './tiles'
 
 interface Pose {
   position: Vector3
@@ -52,9 +49,9 @@ const viewDirection = (azimuth: number) =>
   )
 
 /** Terrain height (scene units, before exaggeration) at terrain coordinates. */
-function heightAt(map: Map, x: number, y: number) {
-  const { lat, lon } = map.getLocation({ x, y, z: 0 })
-  return map.getTerrainPositionSync({ lat, lon }, { loadTile: false })?.z
+function heightAt(surface: Surface, x: number, y: number) {
+  const { lat, lon } = surface.getLocation({ x, y, z: 0 })
+  return surface.getTerrainPositionSync({ lat, lon }, { loadTile: false })?.z
 }
 
 /**
@@ -63,7 +60,7 @@ function heightAt(map: Map, x: number, y: number) {
  * route's start, middle and end towards the camera. Ties go to `AZIMUTH`.
  */
 function clearAzimuth(
-  map: Map,
+  surface: Surface,
   targets: Vector3[],
   reach: number,
   exaggeration: number
@@ -80,7 +77,7 @@ function clearAzimuth(
     for (const target of targets) {
       for (let k = 1; k <= 10; k++) {
         const r = (reach * k) / 10
-        const ground = heightAt(map, target.x + dx * r, target.y + dy * r)
+        const ground = heightAt(surface, target.x + dx * r, target.y + dy * r)
         if (ground !== undefined)
           hidden += Math.max(0, ground * exaggeration - (target.z + r * slope))
       }
@@ -168,7 +165,7 @@ function fitDistance(
 function routePose(
   camera: PerspectiveCamera,
   drape: Drape,
-  map: Map | null
+  surface: Surface | null
 ): Pose {
   const { exaggeration } = settingsStore.state
   const box = new Box3()
@@ -194,12 +191,17 @@ function routePose(
   const size = box.getSize(new Vector3())
   const initial = Math.max(size.x, size.y, size.z, 50) * 1.5
   // orbit around the ground, not a point in the air above it
-  const ground = map ? heightAt(map, center.x, center.y) : undefined
+  const ground = surface ? heightAt(surface, center.x, center.y) : undefined
   if (ground !== undefined) center.z = ground * exaggeration
 
   const targets = [samples[0], center, samples[samples.length - 1]]
-  const azimuth = map
-    ? clearAzimuth(map, targets, initial * Math.cos(ELEVATION), exaggeration)
+  const azimuth = surface
+    ? clearAzimuth(
+        surface,
+        targets,
+        initial * Math.cos(ELEVATION),
+        exaggeration
+      )
     : AZIMUTH
   const direction = viewDirection(azimuth)
   const distance = fitDistance(
@@ -262,14 +264,13 @@ function useTerrainBox() {
   return () => {
     const { map } = terrainStore.state
     if (!map) return null
-    const count = map.terrain.children.length
+    const tiles = placedTiles(map)
     const entry = cache.current
-    if (entry.map !== map || entry.count !== count) {
+    if (entry.map !== map || entry.count !== tiles.length) {
       entry.map = map
-      entry.count = count
+      entry.count = tiles.length
       entry.box.makeEmpty()
-      for (const tile of map.terrain.children) {
-        const mesh = tile as Mesh
+      for (const { mesh } of tiles) {
         mesh.geometry.computeBoundingBox()
         const local = mesh.geometry.boundingBox
         if (local) entry.box.union(local.clone().translate(mesh.position))
@@ -283,6 +284,7 @@ export function CameraRig() {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const gl = useThree((s) => s.gl)
   const set = useThree((s) => s.set)
+  const invalidate = useThree((s) => s.invalidate)
   const size = useThree((s) => s.size)
   const controlsRef = useRef<MapControls | null>(null)
   const flight = useRef<Flight | null>(null)
@@ -312,19 +314,33 @@ export function CameraRig() {
     const cancel = () => {
       flight.current = null
     }
+    // the scene renders on demand: every move of the camera asks for a frame
+    // (damping and auto-rotate keep asking while they move it)
+    const change = () => {
+      invalidate()
+    }
     controls.addEventListener('start', cancel)
+    controls.addEventListener('change', change)
     controlsRef.current = controls
     sceneRefs.controls = controls
     set({ controls })
     return () => {
       controls.removeEventListener('start', cancel)
+      controls.removeEventListener('change', change)
       controls.stopListenToKeyEvents()
       controls.dispose()
       controlsRef.current = null
       sceneRefs.controls = null
       set({ controls: null })
     }
-  }, [camera, gl, set])
+  }, [camera, gl, set, invalidate])
+
+  // the map features draw the tiles around what the camera looks at first
+  const map = useSelector(terrainStore, (s) => s.map)
+  useEffect(() => {
+    const controls = controlsRef.current
+    if (map && controls) map.focus = controls.target
+  }, [map])
 
   // The optical center sits in the middle of the area the panels leave free.
   // It glides there when a panel or sheet opens instead of jumping.
@@ -334,6 +350,7 @@ export function CameraRig() {
     width: number
     height: number
   } | null>(null)
+  /** Returns whether the center still glides. */
   const updateCenter = (delta: number) => {
     const { insets } = uiStore.state
     const { width, height } = size
@@ -358,10 +375,11 @@ export function CameraRig() {
       current.y === next.y &&
       current.width === width &&
       current.height === height
-    if (unchanged) return
+    if (unchanged) return false
     center.current = next
     camera.setViewOffset(width, height, -next.x, -next.y, width, height)
     camera.updateProjectionMatrix()
+    return next.x !== x || next.y !== y
   }
 
   const flyTo = (to: Pose, seconds: number) => {
@@ -389,7 +407,7 @@ export function CameraRig() {
   useEffect(() => {
     const controls = controlsRef.current
     if (!fit || !controls) return
-    const extent = fit.tileSize * fit.nTiles
+    const extent = gridSize(fit)
     camera.near = Math.max(0.5, extent / 4000)
     camera.far = extent * 30
     camera.updateProjectionMatrix()
@@ -404,7 +422,7 @@ export function CameraRig() {
     const track = viewerStore.state.track
     if (!drape || !track || framed.current === track.points) return
     framed.current = track.points
-    flyTo(routePose(camera, drape, terrainStore.state.map), INTRO.camera[1])
+    flyTo(routePose(camera, drape, terrainStore.state.surface), INTRO.camera[1])
     // `flyTo` is a plain function of this render: the drape alone triggers
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drape])
@@ -413,15 +431,15 @@ export function CameraRig() {
     const reset = () => {
       const current = terrainStore.state.drape
       if (current)
-        flyTo(routePose(camera, current, terrainStore.state.map), 1.2)
+        flyTo(routePose(camera, current, terrainStore.state.surface), 1.2)
     }
     const focus = (event: Event) => {
       const target = (event as CustomEvent<FocusTarget>).detail
-      const { map } = terrainStore.state
+      const { map, surface } = terrainStore.state
       const world = sceneRefs.world
       const controls = controlsRef.current
-      if (!target || !map || !world || !controls) return
-      const local = surfacePoint(map, target.lat, target.lon)
+      if (!target || !map || !surface || !world || !controls) return
+      const local = surfacePoint(surface, target.lat, target.lon)
       const point = world.localToWorld(new Vector3(local.x, local.y, local.z))
       const offset = camera.position.clone().sub(controls.target)
       const distance = Math.min(offset.length(), map.options.tileSize * 0.9)
@@ -443,9 +461,10 @@ export function CameraRig() {
 
   const followed = useMemo(() => new Vector3(), [])
   useFrame((_, delta) => {
-    updateCenter(delta)
+    const gliding = updateCenter(delta)
     const controls = controlsRef.current
     if (!controls) return
+    if (gliding || flight.current) invalidate()
     const settings = settingsStore.state
     const current = flight.current
     if (current) {

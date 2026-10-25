@@ -1,13 +1,18 @@
 import { invalidate } from '@react-three/fiber'
 import { shallow, useSelector } from '@tanstack/react-store'
 import { useEffect, useMemo } from 'react'
-import { Color, MeshBasicMaterial } from 'three'
+import { Color, type Material, MeshBasicMaterial, Vector4 } from 'three'
 import {
   Buildings,
+  isBush,
+  type LayerDistance,
+  type Look,
   type Map,
   Roads,
   TerrainBase,
-  Trees,
+  Utils,
+  Vegetation,
+  type VegetationFeature,
   Water
 } from 'three-map-terrain'
 
@@ -36,7 +41,7 @@ export const FEATURE_MIN_ZOOM: Readonly<Record<Feature, number>> = {
   buildings: 13,
   roads: 12,
   water: 10,
-  trees: 14
+  vegetation: 14
 }
 
 /** Whether a feature of `shown` is drawn at `zoom`: then its data needs credit. */
@@ -49,7 +54,7 @@ export interface FeatureLayers {
   readonly buildings: Buildings
   readonly roads: Roads
   readonly water: Water
-  readonly trees: Trees
+  readonly vegetation: Vegetation
 }
 
 /**
@@ -69,18 +74,119 @@ const featureLook = (style: LookStyle, feature: Feature) => ({
  */
 export const TRUNK_DISTANCE = 1200
 
-/** …and the outlines of buildings: a haze of lines farther away. */
+/**
+ * …and the outlines of buildings over solid walls: a haze of lines farther
+ * away. In lines the outlines are the buildings: never hidden there.
+ */
 export const EDGE_DISTANCE = 3000
 
+/** Opacity from the material's own to `opacity`, from `from` to `to` meters away. */
+export interface Fade {
+  readonly from: number
+  readonly to: number
+  readonly opacity: number
+}
+
 /**
- * Meters between the trees of a wood: the library's default — and sparser
- * on the coarse level of detail, which the camera only sees from afar.
+ * How the outlines of buildings fade with the distance — per pixel, so that
+ * no tile's border shows: over solid walls to nothing by `EDGE_DISTANCE`,
+ * where their tiles stop drawing them; in lines only dimmed, the fill under
+ * them thickening (`FILL_FADE`): outlines near, masses far.
  */
-export const TREE_SPACING = { detail: 9, coarse: 14 } as const
+export const EDGE_FADE: Readonly<Record<'solid' | 'wireframe', Fade>> = {
+  solid: { from: EDGE_DISTANCE / 2, to: EDGE_DISTANCE, opacity: 0 },
+  wireframe: { from: 1500, to: 5000, opacity: 0.35 }
+}
+export const FILL_FADE: Fade = { from: 1500, to: 5000, opacity: 0.3 }
+
+/** The outlines' distance in a style: hidden far over solid walls only. */
+const edgeDistance = (style: LookStyle): LayerDistance | undefined =>
+  style.wireframe
+    ? undefined
+    : (part) => (part === 'edges' ? EDGE_DISTANCE : undefined)
+
+/**
+ * Fades a material's opacity with the distance from the camera (`fade`, in
+ * meters; `metersPerUnit` of the scene), in its own shader: a built-in
+ * material of three.js.
+ */
+export function fadeWithDistance(
+  material: Material,
+  fade: Fade,
+  metersPerUnit: number
+) {
+  const range = new Vector4(fade.from, fade.to, fade.opacity, metersPerUnit)
+  material.transparent = true
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.fade = { value: range }
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        'void main() {',
+        'uniform vec4 fade;\nvarying float vFadeMeters;\nvoid main() {'
+      )
+      .replace(
+        '#include <project_vertex>',
+        '#include <project_vertex>\n\tvFadeMeters = length( mvPosition.xyz ) * fade.w;'
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        'void main() {',
+        'uniform vec4 fade;\nvarying float vFadeMeters;\nvoid main() {'
+      )
+      .replace(
+        'vec4 diffuseColor = vec4( diffuse, opacity );',
+        'vec4 diffuseColor = vec4( diffuse, mix( opacity, fade.z, smoothstep( fade.x, fade.y, vFadeMeters ) ) );'
+      )
+  }
+  material.customProgramCacheKey = () => 'distance-fade'
+}
+
+/**
+ * The library's buildings, their outlines fading with the distance
+ * (`EDGE_FADE`) instead of ending at a tile's border — in lines, with the
+ * fill under them.
+ */
+export class FadingBuildings extends Buildings {
+  protected override createMaterial(
+    part: string,
+    kind: 'faces' | 'lines',
+    look: Look
+  ): Material {
+    const material = super.createMaterial(part, kind, look)
+    const { map } = this
+    if (!map) return material
+    const { tileSize, zoom } = map.options
+    const metersPerUnit = Utils.tileWidth(map.geoLocation.lat, zoom) / tileSize
+    const fade =
+      kind === 'lines'
+        ? EDGE_FADE[look.wireframe ? 'wireframe' : 'solid']
+        : look.wireframe
+          ? FILL_FADE
+          : undefined
+    if (fade) fadeWithDistance(material, fade, metersPerUnit)
+    return material
+  }
+}
+
+/**
+ * Meters between the trees of a wood and the bushes of scrub: the library's
+ * defaults — and sparser on the coarse level of detail, which the camera
+ * only sees from afar.
+ */
+export const PLANT_SPACING = {
+  detail: { tree: 9, bush: 5 },
+  coarse: { tree: 14, bush: 8 }
+} as const
+
+const plantSpacing =
+  (coarse: boolean) => (_zoom: number, feature: VegetationFeature) =>
+    PLANT_SPACING[coarse ? 'coarse' : 'detail'][
+      isBush(feature) ? 'bush' : 'tree'
+    ]
 
 /**
  * The OpenStreetMap features of one map, from OpenFreeMap's vector tiles: no
- * key, and a tile is downloaded once for all four. Trees keep clear of the
+ * key, and a tile is downloaded once for all four. Plants keep clear of the
  * ground of the others — also while those are hidden.
  */
 export function createFeatureLayers(
@@ -88,10 +194,10 @@ export function createFeatureLayers(
   coarse = false
 ): FeatureLayers {
   const source = { api: 'openfreemap' } as const
-  const buildings = new Buildings({
+  const buildings = new FadingBuildings({
     source,
     edges: true,
-    maxDistance: (part) => (part === 'edges' ? EDGE_DISTANCE : undefined),
+    maxDistance: edgeDistance(style),
     minZoom: FEATURE_MIN_ZOOM.buildings,
     material: featureLook(style, 'buildings')
   })
@@ -105,21 +211,22 @@ export function createFeatureLayers(
     minZoom: FEATURE_MIN_ZOOM.water,
     material: featureLook(style, 'water')
   })
-  const trees = new Trees({
+  const vegetation = new Vegetation({
     source,
-    spacing: coarse ? TREE_SPACING.coarse : TREE_SPACING.detail,
+    spacing: plantSpacing(coarse),
     avoid: [water, roads, buildings],
     maxDistance: (part) => (part === 'trunks' ? TRUNK_DISTANCE : undefined),
-    minZoom: FEATURE_MIN_ZOOM.trees,
-    material: featureLook(style, 'trees')
+    minZoom: FEATURE_MIN_ZOOM.vegetation,
+    material: featureLook(style, 'vegetation')
   })
-  return { buildings, roads, water, trees }
+  return { buildings, roads, water, vegetation }
 }
 
 /** Another look or theme: the layers' materials change, not their geometry. */
 export function styleFeatures(layers: FeatureLayers, style: LookStyle) {
   for (const feature of FEATURES)
     layers[feature].setMaterial(featureLook(style, feature))
+  layers.buildings.maxDistance = edgeDistance(style)
   invalidate()
 }
 

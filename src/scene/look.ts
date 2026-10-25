@@ -35,12 +35,12 @@ export type Palette = (typeof PALETTE)[Theme]
 export const WIRE_FILL = 0.12
 
 /**
- * The fill of a feature in lines — none under trees: their outlines read as
+ * The fill of a feature in lines — none under plants: their outlines read as
  * woods on their own, and a fill there is the most of what the transparent
  * pass draws.
  */
 export const wireFill = (feature: Feature) =>
-  feature === 'trees' ? 0 : WIRE_FILL
+  feature === 'vegetation' ? 0 : WIRE_FILL
 
 /** How a look draws the terrain and the map features, in one theme. */
 export interface LookStyle {
@@ -53,7 +53,7 @@ export interface LookStyle {
   buildings: string
   roads: string
   water: string
-  trees: string
+  vegetation: string
 }
 
 /**
@@ -75,7 +75,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: WATER_COLOR,
-      trees: CROWN_COLOR
+      vegetation: CROWN_COLOR
     },
     light: {
       imagery: 'color',
@@ -84,7 +84,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: WATER_COLOR,
-      trees: CROWN_COLOR
+      vegetation: CROWN_COLOR
     }
   },
   mono: {
@@ -95,7 +95,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: '#404040',
-      trees: '#303030'
+      vegetation: '#303030'
     },
     light: {
       imagery: 'mono',
@@ -104,7 +104,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#ffffff',
       roads: '#d6d6d6',
       water: '#a8a8a8',
-      trees: '#8c8c8c'
+      vegetation: '#8c8c8c'
     }
   },
   model: {
@@ -116,7 +116,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#9b968e',
       roads: '#76726b',
       water: '#3d6b92',
-      trees: '#4d7540'
+      vegetation: '#4d7540'
     },
     light: {
       imagery: null,
@@ -125,7 +125,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#ffffff',
       roads: '#faf8f3',
       water: '#8fb8d9',
-      trees: '#7fa463'
+      vegetation: '#7fa463'
     }
   },
   wireframe: {
@@ -136,7 +136,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#8f8f8f',
       roads: '#8c7759',
       water: '#3b5d7b',
-      trees: '#4f7049'
+      vegetation: '#4f7049'
     },
     light: {
       imagery: null,
@@ -145,7 +145,7 @@ export const LOOK_STYLES: Readonly<
       buildings: '#8c8c8c',
       roads: '#cfb48f',
       water: '#a3c1db',
-      trees: '#a6c49e'
+      vegetation: '#a6c49e'
     }
   }
 }

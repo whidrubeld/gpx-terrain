@@ -150,7 +150,7 @@ export function ViewBody() {
 }
 
 /**
- * Buildings, roads, water and trees of the current look, under its switch:
+ * Buildings, roads, water and vegetation of the current look, under its switch:
  * each look keeps its own choice. A feature the terrain's zoom cannot draw
  * says from which zoom it can.
  */

@@ -3997,10 +3997,10 @@ terser@^5.17.4:
     commander "^2.20.0"
     source-map-support "~0.5.20"
 
-three-map-terrain@^3.4.0:
-  version "3.4.0"
-  resolved "https://registry.yarnpkg.com/three-map-terrain/-/three-map-terrain-3.4.0.tgz#4a22c06060703d61238b11067144f284d915f2bd"
-  integrity sha512-VICDEQBEOHPnkjoWqQLtVRNPnhFTdmiXf/RDG2NNVWdcHfrA9TLTraA2tODWTVhaZkCsHHAPMojC8DjOYcmElw==
+three-map-terrain@^3.5.2:
+  version "3.5.2"
+  resolved "https://registry.yarnpkg.com/three-map-terrain/-/three-map-terrain-3.5.2.tgz#a6332b6db7eac9f0249224041f12642cf3dd5ac4"
+  integrity sha512-sV+2GCF8yq7ZpqmAnj3oD9bb3E6JUq0x+E3OeoTQHJLmhfnOrPF+imbKj/HybxeZRUnYhSa1avYjRFwVD7tuIA==
 
 three-mesh-bvh@^0.8.3:
   version "0.8.3"

@@ -86,8 +86,9 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   look's lines themselves. The imagery loads in every look, so switching is
   immediate; it is credited only where it shows (`showsImagery`). W goes
   into lines and back to `solidLook`.
-- **Map features** (scene/layers.ts): `Buildings`, `Roads`, `Water`, `Trees`
-  from OpenFreeMap (no key; one vector tile for all four), made once per map.
+- **Map features** (scene/layers.ts): `Buildings`, `Roads`, `Water`,
+  `Vegetation` (trees in woods, bushes in scrub) from OpenFreeMap (no key;
+  one vector tile for all four), made once per map.
   Which of them show is per look (`lookFeatures`, defaults in
   `LOOK_FEATURES`: on the photo only buildings, since the photo has the
   rest), under one switch (`features`, C). A layer joins the map the first
@@ -103,7 +104,7 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 - **`map.terrain` is not a list of tiles**: it also holds the layers' groups.
   Use `placedTiles(map)` (scene/tiles.ts).
 - **Levels of detail** (scene/lod.ts, `settings.lod`): two maps of the same
-  zoom and frame. The coarse one (half the segments, sparser woods) holds
+  zoom and frame. The coarse one (half the segments, sparser plants) holds
   the whole grid:
   it is `terrainStore.map` — base, camera bounds, tile counts. The detailed
   one (`settings.segments`) loads the tiles where a coarse cell would span
@@ -171,8 +172,13 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   The imagery is a zoom deeper, but not past 14 (`imageryZoomOffset`:
   EOX's deeper tiles are the same Sentinel-2 picture enlarged); the route
   is draped with `getTerrainPositionSync`; exaggeration is `scale.z` of the
-  world group; trunks of trees hide beyond `TRUNK_DISTANCE`, outlines of
-  buildings beyond `EDGE_DISTANCE` (`maxDistance`).
+  world group; trunks of trees hide beyond `TRUNK_DISTANCE` (`maxDistance`,
+  per tile). Outlines of buildings fade per pixel (`FadingBuildings`,
+  `EDGE_FADE`): over solid walls to nothing by `EDGE_DISTANCE`, where their
+  tiles hide them; in lines they are the buildings — never hidden, only
+  dimmed, the fill under them thickening (`FILL_FADE`). Never hide by
+  `maxDistance` what a look draws a feature with alone: whole tiles of it
+  vanish at once.
 - **Rendering on demand** (`frameloop='demand'`, `RenderOnDemand` in
   Environment.tsx): a still scene draws no frames. Store changes, the
   controls' `change`, pointer moves, tiles placed or stitched, imagery
@@ -223,10 +229,10 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^3.4`: layers drawn between frames,
+- `three-map-terrain` comes from npm (`^3.5`: layers drawn between frames,
   looks changed in place, `fillOpacity`, `imageryZoomOffset`, layers'
   `maxDistance`, `removeTileSegment` and `skirt` for levels of detail, a
-  rectangular `grid`; after
+  rectangular `grid`, `Vegetation` with bushes; after
   a bump, restart `yarn dev`: Vite keeps the old bundle of the package); its
   version is shown in About
   (`__LIBRARY_VERSION__`, read from its package.json at build time).

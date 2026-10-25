@@ -15,7 +15,7 @@ export type Look = (typeof LOOKS)[number]
 export type SolidLook = Exclude<Look, 'wireframe'>
 
 /** Map features drawn on the terrain from OpenStreetMap (see scene/layers.ts). */
-export const FEATURES = ['buildings', 'roads', 'water', 'trees'] as const
+export const FEATURES = ['buildings', 'roads', 'water', 'vegetation'] as const
 export type Feature = (typeof FEATURES)[number]
 export type FeatureSet = Record<Feature, boolean>
 
@@ -25,10 +25,10 @@ export type FeatureSet = Record<Feature, boolean>
  * everything on the model and in lines.
  */
 export const LOOK_FEATURES: Readonly<Record<Look, Readonly<FeatureSet>>> = {
-  photo: { buildings: true, roads: false, water: false, trees: false },
-  mono: { buildings: true, roads: true, water: false, trees: false },
-  model: { buildings: true, roads: true, water: true, trees: true },
-  wireframe: { buildings: true, roads: true, water: true, trees: true }
+  photo: { buildings: true, roads: false, water: false, vegetation: false },
+  mono: { buildings: true, roads: true, water: false, vegetation: false },
+  model: { buildings: true, roads: true, water: true, vegetation: true },
+  wireframe: { buildings: true, roads: true, water: true, vegetation: true }
 }
 
 export interface Settings {
@@ -132,6 +132,22 @@ function legacyLook({ imagery, wireframe }: Record<string, unknown>) {
   return imagery === 'mono' ? 'mono' : imagery === 'relief' ? 'model' : 'photo'
 }
 
+/** Features of every look stored before vegetation, when it was trees. */
+function legacyFeatures(stored: unknown) {
+  if (typeof stored !== 'object' || stored === null) return stored
+  return Object.fromEntries(
+    Object.entries(stored).map(([look, set]: [string, unknown]) => [
+      look,
+      typeof set === 'object' &&
+      set !== null &&
+      'trees' in set &&
+      !('vegetation' in set)
+        ? { ...set, vegetation: set.trees }
+        : set
+    ])
+  )
+}
+
 /** Booleans of `stored` where `base` has them; nested objects key by key. */
 function mergeBooleans<T extends Record<string, unknown>>(
   base: T,
@@ -163,7 +179,10 @@ function load(): Settings {
       if (typeof stored[key] === typeof value) merged[key] = stored[key]
     }
     merged.panels = mergeBooleans(base.panels, stored.panels)
-    merged.lookFeatures = mergeBooleans(base.lookFeatures, stored.lookFeatures)
+    merged.lookFeatures = mergeBooleans(
+      base.lookFeatures,
+      legacyFeatures(stored.lookFeatures)
+    )
     const settings = merged as unknown as Settings
     // settings of before looks: their imagery and wireframe
     const legacy = 'imagery' in stored || 'wireframe' in stored
@@ -262,7 +281,7 @@ export function setLookFeature(feature: Feature, shown: boolean) {
 export const shownFeatures = (settings: Settings): FeatureSet =>
   settings.features
     ? settings.lookFeatures[settings.look]
-    : { buildings: false, roads: false, water: false, trees: false }
+    : { buildings: false, roads: false, water: false, vegetation: false }
 
 /** Steps through a list of options, wrapping around. */
 export function cycleSetting<K extends 'pixelSize' | 'theme'>(

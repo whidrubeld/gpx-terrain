@@ -100,7 +100,7 @@ describe('levels of detail', () => {
 
   it('read the tile of an object from its name', () => {
     const object = new Object3D()
-    object.name = 'trees crowns 14/8659/5785 outline'
+    object.name = 'vegetation crowns 14/8659/5785 outline'
     expect(tileKeyOf(object)).toBe('14/8659/5785')
     object.name = 'distance'
     expect(tileKeyOf(object)).toBeUndefined()

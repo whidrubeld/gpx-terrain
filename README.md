@@ -19,7 +19,7 @@ Elevation profile, playback, waypoints and coordinates — in English and Russia
 
 - **Any GPX file** — tracks, routes and waypoints, GPX 1.0 and 1.1, heart rate from Garmin-style extensions. Drop a file anywhere, pick one, or start with one of three example routes. Files never leave the browser.
 - **Real relief, four styles** — the terrain grid is fitted to the track, heights are true to scale with adjustable exaggeration. The Sentinel-2 photo with 3D buildings, the photo in gray, a colored model, or lines with every feature in a color of its own.
-- **Buildings, roads, water and trees** — from OpenStreetMap, standing and lying on the terrain; each style shows what suits it (on the photo only the buildings it lacks), and you choose per style.
+- **Buildings, roads, water and vegetation** — from OpenStreetMap, standing and lying on the terrain; each style shows what suits it (on the photo only the buildings it lacks), and you choose per style.
 - **Profile and playback** — scrub the elevation profile, play the track back at four speeds with the camera following, inspect any point under the cursor.
 - **English and Russian** — taken from the browser's languages until you pick one next to the theme switch; numbers, dates and units follow the language.
 - **Installable, works offline** — a PWA: the app, its fonts and the examples are cached on install, terrain, imagery and map features as you view them. The installed app opens `.gpx` files from the system (Chromium browsers).
@@ -66,16 +66,16 @@ Architecture, conventions and the checks to run are in [AGENTS.md](AGENTS.md).
 
 GPX Terrain is the showcase of [three-map-terrain](https://github.com/whidrubeld/three-map-terrain): 3D terrain for three.js from slippy-map tiles.
 
-| Feature                        | API                                                                     | Where                                                                      |
-| ------------------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Terrain grid around the track  | `new Map({ source, location, options })`, `map.init()`                  | [Terrain.tsx](src/scene/Terrain.tsx)                                       |
-| Zoom that fits the track       | `Utils.position2tileFraction`, true-scale `zScale`                      | [fit.ts](src/lib/fit.ts)                                                   |
-| Track draped on the surface    | `map.getTerrainPositionSync`                                            | [drape.ts](src/scene/drape.ts)                                             |
-| Terrain under the cursor       | `map.pick(raycaster)`                                                   | [Probes.tsx](src/scene/Probes.tsx)                                         |
-| Styles at runtime              | `material.create`, `process` (gray photo), `map.setMaterial()`          | [Terrain.tsx](src/scene/Terrain.tsx), [look.ts](src/scene/look.ts)         |
-| Buildings, roads, water, trees | `Buildings`, `Roads`, `Water`, `Trees` on OpenFreeMap, `map.addLayer()` | [layers.ts](src/scene/layers.ts)                                           |
-| The "diorama" block and grid   | `TerrainBase`, `map.getLocation`                                        | [layers.ts](src/scene/layers.ts), [Graticule.tsx](src/scene/Graticule.tsx) |
-| Elevations for tracks without  | `getTerrainPositionSync(...).z / zScale`                                | [World.tsx](src/scene/World.tsx)                                           |
+| Feature                         | API                                                                          | Where                                                                      |
+| ------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Terrain grid around the track   | `new Map({ source, location, options })`, `map.init()`                       | [Terrain.tsx](src/scene/Terrain.tsx)                                       |
+| Zoom that fits the track        | `Utils.position2tileFraction`, true-scale `zScale`                           | [fit.ts](src/lib/fit.ts)                                                   |
+| Track draped on the surface     | `map.getTerrainPositionSync`                                                 | [drape.ts](src/scene/drape.ts)                                             |
+| Terrain under the cursor        | `map.pick(raycaster)`                                                        | [Probes.tsx](src/scene/Probes.tsx)                                         |
+| Styles at runtime               | `material.create`, `process` (gray photo), `map.setMaterial()`               | [Terrain.tsx](src/scene/Terrain.tsx), [look.ts](src/scene/look.ts)         |
+| Buildings, roads, water, plants | `Buildings`, `Roads`, `Water`, `Vegetation` on OpenFreeMap, `map.addLayer()` | [layers.ts](src/scene/layers.ts)                                           |
+| The "diorama" block and grid    | `TerrainBase`, `map.getLocation`                                             | [layers.ts](src/scene/layers.ts), [Graticule.tsx](src/scene/Graticule.tsx) |
+| Elevations for tracks without   | `getTerrainPositionSync(...).z / zScale`                                     | [World.tsx](src/scene/World.tsx)                                           |
 
 Vertical exaggeration is `scale.z` of the group holding the terrain and
 everything on it, so it is free to change. A tile request that stalls does not
@@ -124,7 +124,7 @@ tile servers below, for the area of the track.
 - Imagery: [Sentinel-2 cloudless](https://s2maps.eu) by EOX IT Services GmbH
   (contains modified Copernicus Sentinel data 2016), CC BY-NC-SA 4.0
 - Elevation: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
-- Buildings, roads, water and trees: [OpenFreeMap](https://openfreemap.org)
+- Buildings, roads, water and vegetation: [OpenFreeMap](https://openfreemap.org)
   © [OpenMapTiles](https://www.openmaptiles.org) © [OpenStreetMap](https://www.openstreetmap.org/copyright)
   contributors, ODbL
 - Example routes: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, ODbL

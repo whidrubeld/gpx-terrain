@@ -130,7 +130,7 @@
     "about": {
       "photo": "Satellite photo · 3D buildings on it",
       "mono": "The photo in gray · white buildings and roads",
-      "model": "A colored model · buildings, roads, water, trees",
+      "model": "A colored model · buildings, roads, water, vegetation",
       "wireframe": "Lines · every feature in a color of its own"
     }
   },
@@ -140,7 +140,7 @@
     "buildings": "Buildings",
     "roads": "Roads",
     "water": "Water",
-    "trees": "Trees",
+    "vegetation": "Vegetation",
     "fromZoom": "From Z{zoom}",
     "graticule": "Coordinate grid",
     "distanceMarks": "Distance marks",
@@ -324,7 +324,7 @@
       "close": "Close the dialog"
     },
     "shortcutsOff": "Single-key shortcuts are off. Turn them on in View → Keyboard shortcuts.",
-    "text": "Drop a GPS recording and see it on real relief. Terrain, imagery, map features and the geolocation math come from {library}: elevation from AWS Terrain Tiles, imagery from Sentinel-2 cloudless by EOX, buildings, roads, water and trees from OpenStreetMap through OpenFreeMap. Your files stay in your browser.",
+    "text": "Drop a GPS recording and see it on real relief. Terrain, imagery, map features and the geolocation math come from {library}: elevation from AWS Terrain Tiles, imagery from Sentinel-2 cloudless by EOX, buildings, roads, water and vegetation from OpenStreetMap through OpenFreeMap. Your files stay in your browser.",
     "offline": "Works offline: the app and the terrain you have viewed are kept on this device.",
     "install": "Install app",
     "sourceCode": "Source code",

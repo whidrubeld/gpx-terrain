@@ -31,7 +31,7 @@ describe('settings', () => {
       buildings: true,
       roads: false,
       water: false,
-      trees: false
+      vegetation: false
     })
     expect(Object.values(settings.lookFeatures.wireframe)).not.toContain(false)
   })
@@ -40,15 +40,29 @@ describe('settings', () => {
     const settings = await load({
       'gpx-terrain/settings@1': JSON.stringify({
         look: 'model',
-        lookFeatures: { model: { trees: false, water: 'no' }, photo: 1 }
+        lookFeatures: { model: { vegetation: false, water: 'no' }, photo: 1 }
       })
     })
     expect(settings.look).toBe('model')
     expect(settings.lookFeatures.model).toMatchObject({
-      trees: false,
+      vegetation: false,
       water: true
     })
     expect(settings.lookFeatures.photo.buildings).toBe(true)
+  })
+
+  it('keep the trees of before as vegetation', async () => {
+    const settings = await load({
+      'gpx-terrain/settings@1': JSON.stringify({
+        lookFeatures: {
+          model: { trees: false },
+          mono: { trees: true, vegetation: false }
+        }
+      })
+    })
+    expect(settings.lookFeatures.model.vegetation).toBe(false)
+    expect(settings.lookFeatures.mono.vegetation).toBe(false)
+    expect(settings.lookFeatures.model).not.toHaveProperty('trees')
   })
 
   it('turn imagery and wireframe of before into a look', async () => {

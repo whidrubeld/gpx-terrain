@@ -120,7 +120,7 @@ describe('handleHotkey', () => {
       buildings: true,
       roads: false,
       water: false,
-      trees: false
+      vegetation: false
     })
   })
 

@@ -5,20 +5,22 @@ description: Upgrade the npm dependencies of GPX Terrain (three-map-terrain, thr
 
 # Upgrade dependencies
 
-One package root, Yarn classic (1.x), `yarn.lock`.
+One package root, pnpm 12 (pinned by `packageManager`), `pnpm-lock.yaml`.
 
 ## 1. Inventory
 
 ```bash
-yarn outdated
+pnpm outdated
+pnpm self-update   # pnpm itself: rewrites `packageManager`
 npm view <pkg>@latest version peerDependencies engines --json   # every major bump
 ```
 
 Also the pinned tooling outside `package.json`:
 
 - `.mcp.json` — `@playwright/mcp`, `threejs-devtools-mcp`, `@upstash/context7-mcp`
-- `.github/workflows/*.yml` — `actions/checkout`, `actions/setup-node`,
-  `actions/upload-artifact`, `JamesIves/github-pages-deploy-action`
+- `.github/workflows/*.yml` — `actions/checkout`, `pnpm/action-setup`,
+  `actions/setup-node`, `actions/upload-artifact`,
+  `JamesIves/github-pages-deploy-action`
 
 Prefer versions published at least two weeks ago.
 
@@ -35,7 +37,7 @@ Prefer versions published at least two weeks ago.
 | `tailwindcss` ↔ `@tailwindcss/vite`                  | Same version; Tailwind majors change the CSS-first config in `src/index.css` (`@theme`, `@custom-variant`).             |
 | `@tanstack/react-store`                              | 0.x: minors may change `createStore`, `useSelector`, `shallow`.                                                         |
 | `eslint` ↔ `@eslint/js`, `eslint-plugin-react-hooks` | Same ESLint major; react-hooks: keep only `rules-of-hooks` and `exhaustive-deps` (the compiler rules misread R3F code). |
-| `@playwright/test` ↔ browsers                        | After a bump: `yarn playwright install chromium`.                                                                       |
+| `@playwright/test` ↔ browsers                        | After a bump: `pnpm exec playwright install chromium`.                                                                  |
 | Node                                                 | CI runs Node 24; check `engines` before raising requirements.                                                           |
 
 Record every upgrade you **cannot** do and why — in the report and in
@@ -44,8 +46,12 @@ AGENTS.md → Version constraints.
 ## 3. Apply
 
 Edit ranges in `package.json` (caret; tilde for `typescript`), then
-`yarn install`. If the lockfile fights back, delete `node_modules` and
-`yarn.lock` and install again.
+`pnpm install` (`pnpm update --latest <pkg>` does both). A dependency whose
+build scripts pnpm blocks needs an `allowBuilds` entry in
+`pnpm-workspace.yaml` (none does today); a release younger than pnpm's
+`minimumReleaseAge` a `minimumReleaseAgeExclude` entry there — remove the
+entries of versions that have aged since. If the lockfile fights back, delete
+`node_modules` and `pnpm-lock.yaml` and install again.
 
 three.js releases: read the [migration guide](https://github.com/mrdoob/three.js/wiki/Migration-Guide)
 between the versions. The app uses more of three than the library: `Line2`
@@ -55,8 +61,8 @@ swaps at runtime (src/scene/). React Three Fiber still uses `THREE.Clock`.
 ## 4. Verify — everything must pass
 
 ```bash
-yarn validate
-yarn test:e2e
+pnpm validate
+pnpm test:e2e
 ```
 
 Then the `verify-app` skill: real tiles in both layouts, the PWA in the

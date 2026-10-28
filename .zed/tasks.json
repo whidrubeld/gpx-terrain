@@ -1,41 +1,41 @@
 // Zed tasks (`task: spawn`). The service worker only exists in the production
 // build: check the PWA with `preview`, not `dev`.
 [
-  { "label": "install", "command": "yarn" },
-  { "label": "dev", "command": "yarn dev" },
+  { "label": "install", "command": "pnpm install" },
+  { "label": "dev", "command": "pnpm dev" },
   {
     "label": "preview: production build",
-    "command": "yarn build && yarn preview",
+    "command": "pnpm build && pnpm preview",
     "save": "all"
   },
-  { "label": "typecheck", "command": "yarn typecheck", "save": "all" },
-  { "label": "lint", "command": "yarn lint", "save": "all" },
-  { "label": "format", "command": "yarn format", "save": "all" },
-  { "label": "test", "command": "yarn test", "save": "all" },
-  { "label": "test: watch", "command": "yarn test:watch" },
-  { "label": "e2e", "command": "yarn test:e2e", "save": "all" },
-  { "label": "build", "command": "yarn build", "save": "all" },
-  { "label": "validate", "command": "yarn validate", "save": "all" },
+  { "label": "typecheck", "command": "pnpm typecheck", "save": "all" },
+  { "label": "lint", "command": "pnpm lint", "save": "all" },
+  { "label": "format", "command": "pnpm format", "save": "all" },
+  { "label": "test", "command": "pnpm test", "save": "all" },
+  { "label": "test: watch", "command": "pnpm test:watch" },
+  { "label": "e2e", "command": "pnpm test:e2e", "save": "all" },
+  { "label": "build", "command": "pnpm build", "save": "all" },
+  { "label": "validate", "command": "pnpm validate", "save": "all" },
   {
     // src/ is Vitest, e2e/ Playwright: Zed's own test runnables call Vitest for both
     "label": "test: $ZED_RELATIVE_FILE",
-    "command": "case \"$ZED_RELATIVE_FILE\" in e2e/*) yarn playwright test \"$ZED_RELATIVE_FILE\" ;; *) yarn vitest run \"$ZED_RELATIVE_FILE\" ;; esac",
+    "command": "case \"$ZED_RELATIVE_FILE\" in e2e/*) pnpm exec playwright test \"$ZED_RELATIVE_FILE\" ;; *) pnpm exec vitest run \"$ZED_RELATIVE_FILE\" ;; esac",
     "save": "current"
   },
   {
     "label": "test: $ZED_CUSTOM_TYPESCRIPT_VITEST_TEST_NAME",
-    "command": "case \"$ZED_RELATIVE_FILE\" in e2e/*) yarn playwright test \"$ZED_RELATIVE_FILE\" -g \"$ZED_CUSTOM_TYPESCRIPT_VITEST_TEST_NAME\" ;; *) yarn vitest run \"$ZED_RELATIVE_FILE\" -t \"$ZED_CUSTOM_TYPESCRIPT_VITEST_TEST_NAME\" ;; esac",
+    "command": "case \"$ZED_RELATIVE_FILE\" in e2e/*) pnpm exec playwright test \"$ZED_RELATIVE_FILE\" -g \"$ZED_CUSTOM_TYPESCRIPT_VITEST_TEST_NAME\" ;; *) pnpm exec vitest run \"$ZED_RELATIVE_FILE\" -t \"$ZED_CUSTOM_TYPESCRIPT_VITEST_TEST_NAME\" ;; esac",
     "save": "current",
     "tags": ["ts-test", "js-test"]
   },
   {
     "label": "e2e: debug $ZED_RELATIVE_FILE",
-    "command": "yarn playwright test \"$ZED_RELATIVE_FILE\" --debug",
+    "command": "pnpm exec playwright test \"$ZED_RELATIVE_FILE\" --debug",
     "save": "current"
   },
   // the network: Overpass and AWS
-  { "label": "presets", "command": "yarn presets" },
-  { "label": "icons", "command": "yarn icons" },
+  { "label": "presets", "command": "pnpm presets" },
+  { "label": "icons", "command": "pnpm icons" },
   // from a running `dev` (task dev); needs Google Chrome and cwebp
-  { "label": "screenshots", "command": "yarn screenshots", "save": "all" }
+  { "label": "screenshots", "command": "pnpm screenshots", "save": "all" }
 ]

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Renders the README screenshots in docs/ from the running dev server, with
-// real tiles: `yarn dev`, then `yarn screenshots [scene …]`.
+// real tiles: `pnpm dev`, then `pnpm screenshots [scene …]`.
 // Uses the installed Google Chrome, which renders on the GPU even headless
 // (Playwright's own Chromium falls back to software WebGL: the performance
 // panel would show a few FPS). Needs `cwebp` (libwebp) on PATH.

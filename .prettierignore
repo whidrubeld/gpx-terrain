@@ -1,0 +1,3 @@
+pnpm-lock.yaml
+# per-user, ignored by git
+.claude/settings.local.json

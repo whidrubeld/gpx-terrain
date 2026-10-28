@@ -1,4 +1,4 @@
-// The example tracks in public/presets/ (made by `yarn presets`). Their stats
+// The example tracks in public/presets/ (made by `pnpm presets`). Their stats
 // are shown before the file is loaded; gpx.test.ts checks them against the
 // files, so regenerate both together.
 

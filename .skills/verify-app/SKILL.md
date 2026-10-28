@@ -5,20 +5,20 @@ description: Check that GPX Terrain works and looks right in a real browser — 
 
 # Verify the app
 
-Unit tests (`yarn test`) cover parsing, stats, i18n, formats, hotkeys and
-settings; `yarn test:e2e` covers the flows against the production build with
+Unit tests (`pnpm test`) cover parsing, stats, i18n, formats, hotkeys and
+settings; `pnpm test:e2e` covers the flows against the production build with
 **mocked** tiles. This skill covers the rest: real data, real look.
 
 ## 1. Automated baseline
 
 ```bash
-yarn validate      # lint, format, unit tests, build
-yarn test:e2e      # chooser, examples, files, ⌘/Ctrl+O, shortcuts off, PWA offline
+pnpm validate      # lint, format, unit tests, build
+pnpm test:e2e      # chooser, examples, files, ⌘/Ctrl+O, shortcuts off, PWA offline
 ```
 
 ## 2. The app with real tiles
 
-`yarn dev` → http://localhost:5173 (no service worker in dev). With the
+`pnpm dev` → http://localhost:5173 (no service worker in dev). With the
 **playwright** MCP server (or a script), check in both viewports — 1280×800
 and a phone, 390×844 — and in both languages (the EN | RU switch next to
 the theme; `locale: 'ru-RU'` in a fresh context must pick Russian by itself):
@@ -45,13 +45,13 @@ the theme; `locale: 'ru-RU'` in a fresh context must pick Russian by itself):
 8. Console: no errors. One warning is expected: `THREE.Clock` is deprecated
    (React Three Fiber's, not ours).
 
-`yarn screenshots` renders the README images from the running dev server
+`pnpm screenshots` renders the README images from the running dev server
 (Google Chrome for GPU rendering, `cwebp`); look at them, too.
 
 ## 3. PWA (production build only)
 
 ```bash
-yarn build && yarn preview      # http://localhost:4173
+pnpm build && pnpm preview      # http://localhost:4173
 ```
 
 - DevTools → Application: the manifest (name, icons incl. maskable,

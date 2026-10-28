@@ -3,7 +3,7 @@
 // worktree's own (.prettierrc, eslint.config.mjs).
 {
   "languages": {
-    // `yarn format` (format:check in CI) covers the .md files too; Zed leaves
+    // `pnpm format` (format:check in CI) covers the .md files too; Zed leaves
     // Markdown unformatted on save by default
     "Markdown": { "format_on_save": "on" }
   },

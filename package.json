@@ -17,6 +17,7 @@
   "engines": {
     "node": ">=24"
   },
+  "packageManager": "pnpm@12.4.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -28,7 +29,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "validate": "yarn lint && yarn format:check && yarn test && yarn build",
+    "validate": "pnpm lint && pnpm format:check && pnpm test && pnpm build",
     "presets": "node scripts/make-presets.mjs",
     "icons": "node scripts/make-icons.mjs",
     "screenshots": "node scripts/screenshots.mjs"
@@ -42,7 +43,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1",
-    "three-map-terrain": "^3.5.2"
+    "three-map-terrain": "^3.5.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

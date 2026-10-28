@@ -1,0 +1,5 @@
+# pnpm settings of the one package (no workspace packages). pnpm installs
+# no release younger than `minimumReleaseAge`: a version needed at once is
+# excluded here — drop the entry once it has aged
+minimumReleaseAgeExclude:
+  - three-map-terrain@3.5.3

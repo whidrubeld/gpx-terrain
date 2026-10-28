@@ -24,31 +24,35 @@ src/
   ui/                   Chooser (start screen + "Change track" dialog), TopBar, panels,
                         overlays/toasts, HelpDialog, Toolbar, controls, pixel icons
 e2e/                    Playwright tests against the production build, tiles mocked
-public/                 favicon, icons/ (yarn icons), presets/*.gpx (yarn presets)
+public/                 favicon, icons/ (pnpm icons), presets/*.gpx (pnpm presets)
 scripts/                make-presets.mjs, make-icons.mjs, screenshots.mjs
-docs/                   README screenshots (yarn screenshots)
+docs/                   README screenshots (pnpm screenshots)
 .skills/                agent skills (symlinked as .claude/skills)
 ```
 
-## Commands (Yarn classic 1.x, Node 24)
+## Commands (pnpm 12, Node 24)
 
 ```bash
-yarn                 # install
-yarn dev             # http://localhost:5173 (no service worker in dev)
-yarn typecheck       # tsc -b: app, service worker and node configs (3 tsconfigs)
-yarn lint            # eslint (typescript-eslint strictTypeChecked + react-hooks)
-yarn format          # prettier --write   (format:check in CI)
-yarn test            # vitest unit tests (src/**/*.test.ts)
-yarn test:e2e        # playwright; first time: yarn playwright install chromium
-yarn build           # tsc -b + vite build + service worker → dist/
-yarn preview         # serve dist/ (check PWA behavior here)
-yarn validate        # lint + format:check + test + build (what deploy runs)
-yarn presets         # regenerate public/presets/*.gpx (network: Overpass, AWS)
-yarn icons           # regenerate public/icons/*.png from the pixel logo
-yarn screenshots     # docs/*.webp from a running `yarn dev` (Chrome + cwebp)
+pnpm install         # install
+pnpm dev             # http://localhost:5173 (no service worker in dev)
+pnpm typecheck       # tsc -b: app, service worker and node configs (3 tsconfigs)
+pnpm lint            # eslint (typescript-eslint strictTypeChecked + react-hooks)
+pnpm format          # prettier --write   (format:check in CI)
+pnpm test            # vitest unit tests (src/**/*.test.ts)
+pnpm test:e2e        # playwright; first time: pnpm exec playwright install chromium
+pnpm build           # tsc -b + vite build + service worker → dist/
+pnpm preview         # serve dist/ (check PWA behavior here)
+pnpm validate        # lint + format:check + test + build (what deploy runs)
+pnpm presets         # regenerate public/presets/*.gpx (network: Overpass, AWS)
+pnpm icons           # regenerate public/icons/*.png from the pixel logo
+pnpm screenshots     # docs/*.webp from a running `pnpm dev` (Chrome + cwebp)
 ```
 
-Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
+pnpm is pinned by `packageManager`; its settings are in
+`pnpm-workspace.yaml`. A release younger than `minimumReleaseAge` installs
+only through a `minimumReleaseAgeExclude` entry there (drop it once the
+release has aged). No dependency has build scripts: one that needs them
+takes an `allowBuilds` entry.
 
 ## How it works (read before changing src/)
 
@@ -94,7 +98,9 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
   rest), under one switch (`features`, C). A layer joins the map the first
   time it is shown and is only hidden after that. Another look or theme is
   `layer.setMaterial()`: colors, and in lines the outlines over a light fill
-  (`fillOpacity`) — the materials change, not the geometry. The library
+  (`fillOpacity`) — the materials change, not the geometry; only between
+  lines and solid the library draws the buildings again (their outlines
+  begin at the ground, and in lines run along it). The library
   draws a few tiles per frame, the nearest to `map.focus` (the controls'
   target) first. Below their `FEATURE_MIN_ZOOM` they draw nothing: the View
   panel says from which zoom, and the credit (`drawsFeatures`) follows.
@@ -218,7 +224,7 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 - Every GPX string is untrusted: render it as text; links keep only
   `http(s)` URLs (`safeLink`).
 - Prettier: no semicolons, single quotes, no trailing commas, JSX single
-  quotes. Don't hand-format; run `yarn format`.
+  quotes. Don't hand-format; run `pnpm format`.
 - Every behaviour change needs a unit test; user flows (chooser, files,
   hotkeys, PWA) are covered by `e2e/`. Unit tests that need the DOM declare
   `// @vitest-environment jsdom`.
@@ -229,11 +235,12 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^3.5`: layers drawn between frames,
+- `three-map-terrain` comes from npm (`^3.5.3`: layers drawn between frames,
   looks changed in place, `fillOpacity`, `imageryZoomOffset`, layers'
   `maxDistance`, `removeTileSegment` and `skirt` for levels of detail, a
-  rectangular `grid`, `Vegetation` with bushes; after
-  a bump, restart `yarn dev`: Vite keeps the old bundle of the package); its
+  rectangular `grid`, `Vegetation` with bushes, buildings' outlines on the
+  ground; after
+  a bump, restart `pnpm dev`: Vite keeps the old bundle of the package); its
   version is shown in About
   (`__LIBRARY_VERSION__`, read from its package.json at build time).
 - `three` and `@types/three` share the same minor, inside the library's peer
@@ -250,7 +257,7 @@ Do **not** name a script `check`: `yarn check` is a built-in Yarn 1 command.
 ## MCP servers (`.mcp.json`)
 
 - **playwright** — drive the app, read the console, take screenshots.
-- **threejs-devtools** — inspect the live scene of `yarn dev` (`DEV_PORT=5173`).
+- **threejs-devtools** — inspect the live scene of `pnpm dev` (`DEV_PORT=5173`).
 - **context7** — up-to-date docs (three.js, R3F, Vite, Workbox…).
 
 In development the stores are on `window.__viewer`

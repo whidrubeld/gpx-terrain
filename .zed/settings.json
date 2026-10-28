@@ -1,0 +1,14 @@
+// Zed project settings. TypeScript needs none: vtsls runs the worktree's
+// node_modules/typescript by itself, and Prettier and ESLint are the
+// worktree's own (.prettierrc, eslint.config.mjs).
+{
+  "languages": {
+    // `yarn format` (format:check in CI) covers the .md files too; Zed leaves
+    // Markdown unformatted on save by default
+    "Markdown": { "format_on_save": "on" }
+  },
+  "file_types": {
+    // tracks (public/presets/*.gpx) are XML; highlighted with the XML extension
+    "XML": ["gpx"]
+  }
+}

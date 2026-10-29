@@ -17,7 +17,8 @@ npm view <pkg>@latest version peerDependencies engines --json   # every major bu
 
 Also the pinned tooling outside `package.json`:
 
-- `.mcp.json` — `@playwright/mcp`, `threejs-devtools-mcp`, `@upstash/context7-mcp`
+- `.zed/settings.json` → `context_servers` — `@playwright/mcp`,
+  `threejs-devtools-mcp`, `@upstash/context7-mcp`
 - `.github/workflows/*.yml` — `actions/checkout`, `pnpm/action-setup`,
   `actions/setup-node`, `actions/upload-artifact`,
   `JamesIves/github-pages-deploy-action`

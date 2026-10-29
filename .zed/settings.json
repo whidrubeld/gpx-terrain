@@ -2,6 +2,30 @@
 // node_modules/typescript by itself, and Prettier and ESLint are the
 // worktree's own (.prettierrc, eslint.config.mjs).
 {
+  // MCP servers: the only source of truth (Zed does not read `.mcp.json`).
+  // context7 takes an optional key from the environment: Zed is started from a
+  // shell where CONTEXT7_API_KEY is exported, the server inherits it.
+  "context_servers": {
+    "playwright": {
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.83"]
+    },
+    "threejs-devtools": {
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "threejs-devtools-mcp@0.5.0"],
+      "env": {
+        "DEV_PORT": "5173",
+        "BROWSER": "none"
+      }
+    },
+    "context7": {
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@4.4.2"]
+    }
+  },
   "languages": {
     // `pnpm format` (format:check in CI) covers the .md files too; Zed leaves
     // Markdown unformatted on save by default

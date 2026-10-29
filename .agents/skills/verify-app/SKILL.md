@@ -70,7 +70,7 @@ Browsers round baselines and odd-sized boxes to whole pixels, so judge from
 pixels, not from the CSS:
 
 ```bash
-node .skills/verify-app/scripts/align.mjs http://localhost:5173/ 2 ru   # and: … 1 en
+node .agents/skills/verify-app/scripts/align.mjs http://localhost:5173/ 2 ru   # and: … 1 en
 ```
 
 It prints, per row, the center of each atom relative to the row's center in

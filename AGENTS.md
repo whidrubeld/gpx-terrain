@@ -27,7 +27,7 @@ e2e/                    Playwright tests against the production build, tiles moc
 public/                 favicon, icons/ (pnpm icons), presets/*.gpx (pnpm presets)
 scripts/                make-presets.mjs, make-icons.mjs, screenshots.mjs
 docs/                   README screenshots (pnpm screenshots)
-.skills/                agent skills (symlinked as .claude/skills)
+.agents/skills/          agent skills (SKILL.md per skill, one level)
 ```
 
 ## Commands (pnpm 12, Node 24)
@@ -211,7 +211,7 @@ takes an `allowBuilds` entry.
   10 px UI text uses a 15 px line height (`--text-2xs--line-height`): its
   capitals then land on the same pixel as the 9 px icons and 1 px rules next
   to it. `.kbd` uses `line-height: 12px`. Do not "fix" one element with a
-  nudge; check rows with `.skills/verify-app/scripts/align.mjs`.
+  nudge; check rows with `.agents/skills/verify-app/scripts/align.mjs`.
 - Text that cycles through values (the theme button) uses `StableLabel`, so
   the button keeps the width of its longest option in every language.
 
@@ -254,17 +254,23 @@ takes an `allowBuilds` entry.
 - React Three Fiber 9 still uses `THREE.Clock` (deprecated in r186): the
   console warning comes from there.
 
-## MCP servers (`.mcp.json`)
+## MCP servers (`.zed/settings.json` → `context_servers`)
+
+Zed is the editor: `.zed/` holds the project settings, tasks and debug
+configs, and `context_servers` is the only source of truth for MCP — Zed does
+not read `.mcp.json`.
 
 - **playwright** — drive the app, read the console, take screenshots.
 - **threejs-devtools** — inspect the live scene of `pnpm dev` (`DEV_PORT=5173`).
-- **context7** — up-to-date docs (three.js, R3F, Vite, Workbox…).
+- **context7** — up-to-date docs (three.js, R3F, Vite, Workbox…). Its API key is
+  optional and comes from the environment: start Zed from a shell where
+  `CONTEXT7_API_KEY` is exported.
 
 In development the stores are on `window.__viewer`
 (`viewerStore`, `terrainStore`, `uiStore`, `settingsStore`, `loadPreset`,
 `setHoverIndex`, `seek`, `sceneRefs` …).
 
-## Skills (`.skills/`)
+## Skills (`.agents/skills/`)
 
 - `verify-app` — check the app in a browser: both layouts, languages and
   themes, the chooser, real tiles, PWA in the production build, alignment.

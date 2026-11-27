@@ -235,11 +235,12 @@ takes an `allowBuilds` entry.
 
 ## Version constraints
 
-- `three-map-terrain` comes from npm (`^3.5.3`: layers drawn between frames,
+- `three-map-terrain` comes from npm (`^3.5.4`: layers drawn between frames,
   looks changed in place, `fillOpacity`, `imageryZoomOffset`, layers'
   `maxDistance`, `removeTileSegment` and `skirt` for levels of detail, a
-  rectangular `grid`, `Vegetation` with bushes, buildings' outlines on the
-  ground; after
+  rectangular `grid`, `Vegetation` with bushes — its `maxPerTile` a density,
+  the same share of the planting grid in every tile — buildings' outlines on
+  the ground; after
   a bump, restart `pnpm dev`: Vite keeps the old bundle of the package); its
   version is shown in About
   (`__LIBRARY_VERSION__`, read from its package.json at build time).

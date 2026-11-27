@@ -191,8 +191,8 @@ importers:
         specifier: ^0.186.1
         version: 0.186.1
       three-map-terrain:
-        specifier: ^3.5.3
-        version: 3.5.3(three@0.186.1)
+        specifier: ^3.5.4
+        version: 3.5.4(three@0.186.1)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -2825,8 +2825,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  three-map-terrain@3.5.3:
-    resolution: {integrity: sha512-6CO6wI7OJ+xjhpvOaLzwsKhHK+2qJka2Dt52b/wxPMhDV1SaSIZYEwyfuBLImLY1LnOJqkMjgL6TLthcFHOi/Q==}
+  three-map-terrain@3.5.4:
+    resolution: {integrity: sha512-BRci0adAhyjh8oYfjVDGsZrXGyvA8iM/WKa2U7xNAYIkkVWepYRjXJD5HUa+MbwjENbjiKGD3Phg3ZvjOwPJ1w==}
     peerDependencies:
       three: '>=0.152.0'
 
@@ -5912,7 +5912,7 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  three-map-terrain@3.5.3(three@0.186.1):
+  three-map-terrain@3.5.4(three@0.186.1):
     dependencies:
       three: 0.186.1
 

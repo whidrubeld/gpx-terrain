@@ -2,4 +2,4 @@
 # no release younger than `minimumReleaseAge`: a version needed at once is
 # excluded here — drop the entry once it has aged
 minimumReleaseAgeExclude:
-  - three-map-terrain@3.5.3
+  - three-map-terrain@3.5.4

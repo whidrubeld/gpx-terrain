@@ -4,9 +4,9 @@
 // .rule, .switch, .kbd box) it finds the ink in a screenshot and prints its
 // center relative to the row's center, in CSS px (negative: above).
 //
-//   node .skills/verify-app/scripts/align.mjs [url] [dpr] [en|ru]
+//   node .agents/skills/verify-app/scripts/align.mjs [url] [dpr] [en|ru]
 //
-// Needs `yarn dev` (the stores on window.__viewer). Atoms of one row should
+// Needs `pnpm dev` (the stores on window.__viewer). Atoms of one row should
 // agree within ~0.5 px; a word is centered on its capitals (baseline minus
 // half the cap height), so breves and descenders do not count.
 

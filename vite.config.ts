@@ -78,7 +78,7 @@ export default defineConfig({
     __LIBRARY_VERSION__: JSON.stringify(library.version)
   },
   resolve: {
-    // one three.js, also when three-map-terrain is `yarn link`ed to a local
+    // one three.js, also when three-map-terrain is `pnpm link`ed to a local
     // build that has its own copy in node_modules
     dedupe: ['three']
   },

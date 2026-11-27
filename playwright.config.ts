@@ -35,7 +35,7 @@ export default defineConfig({
   ],
   // the production build: the service worker and the manifest only exist there
   webServer: {
-    command: `yarn build && yarn preview --port ${port} --strictPort`,
+    command: `pnpm build && pnpm preview --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000

@@ -1,0 +1,35 @@
+// Zed debugger (JavaScript adapter). The browser one attaches to the dev
+// server started by its task (tasks.json) and opens Chrome on it.
+[
+  {
+    "label": "Vitest: current file",
+    "adapter": "JavaScript",
+    "type": "pwa-node",
+    "request": "launch",
+    "program": "$ZED_WORKTREE_ROOT/node_modules/vitest/vitest.mjs",
+    "args": ["run", "$ZED_FILE"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "autoAttachChildProcesses": true,
+    "smartStep": true,
+    "console": "integratedTerminal",
+    "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+  },
+  {
+    "label": "Node: current script (scripts/*.mjs)",
+    "adapter": "JavaScript",
+    "type": "pwa-node",
+    "request": "launch",
+    "program": "$ZED_FILE",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "console": "integratedTerminal",
+    "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+  },
+  {
+    "label": "Chrome: app (task dev)",
+    "adapter": "JavaScript",
+    "type": "chrome",
+    "request": "launch",
+    "url": "http://localhost:5173",
+    "webRoot": "$ZED_WORKTREE_ROOT"
+  }
+]

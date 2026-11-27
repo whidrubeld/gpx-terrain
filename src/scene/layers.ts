@@ -222,7 +222,11 @@ export function createFeatureLayers(
   return { buildings, roads, water, vegetation }
 }
 
-/** Another look or theme: the layers' materials change, not their geometry. */
+/**
+ * Another look or theme: the layers' materials change, not their geometry —
+ * except the buildings' between lines and solid, which the library draws
+ * again: in lines their outlines run along the ground.
+ */
 export function styleFeatures(layers: FeatureLayers, style: LookStyle) {
   for (const feature of FEATURES)
     layers[feature].setMaterial(featureLook(style, feature))

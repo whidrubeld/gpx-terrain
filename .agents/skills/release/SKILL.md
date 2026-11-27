@@ -6,7 +6,7 @@ description: Release a new version of GPX Terrain — pick the version, update t
 # Release
 
 The app is not published to npm. A push to `master` runs
-`.github/workflows/deploy.yml` (`yarn validate`, then `dist/` to the
+`.github/workflows/deploy.yml` (`pnpm validate`, then `dist/` to the
 `gh-pages` branch): https://whidrubeld.github.io/gpx-terrain/. Installed
 copies pick the new version up through the service worker and show the
 "new version" toast.
@@ -23,14 +23,14 @@ copies pick the new version up through the service worker and show the
 ## 2. Prepare (on `dev`)
 
 1. A new **three-map-terrain**? `npm view three-map-terrain version`; bump
-   the range in `package.json`, `yarn install`, read its changelog/README
+   the range in `package.json`, `pnpm install`, read its changelog/README
    for API changes (`src/scene/` uses `Map`, `Source`, `Utils`, `pick`,
    `getLocation`, `getTerrainPositionSync`). About shows its version.
 2. Settings format changed incompatibly? Bump the `@1` suffix of
    `STORAGE_KEY` in `src/state/settings.ts` and the inline script in
    `index.html`.
-3. `yarn validate && yarn test:e2e`, then the `verify-app` skill.
-4. UI changed visibly: `yarn dev`, then `yarn screenshots` (Google Chrome,
+3. `pnpm validate && pnpm test:e2e`, then the `verify-app` skill.
+4. UI changed visibly: `pnpm dev`, then `pnpm screenshots` (Google Chrome,
    `cwebp`) and look at `docs/*.webp`.
 5. README: features, screenshots, anything the release changes.
 
